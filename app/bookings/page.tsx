@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { CalendarDays } from 'lucide-react'
@@ -28,7 +28,7 @@ const statusLabel: Record<Booking['status'], string> = {
   cancelled: '취소',
 }
 
-export default function BookingsPage() {
+function BookingsContent() {
   const searchParams = useSearchParams()
   const created = searchParams.get('created') === '1'
 
@@ -116,10 +116,7 @@ export default function BookingsPage() {
           <h1>내 예약</h1>
         </div>
 
-        <Link
-          href="/instructors"
-          className="primaryBtn"
-        >
+        <Link href="/instructors" className="primaryBtn">
           교관 찾기
         </Link>
       </div>
@@ -260,5 +257,21 @@ export default function BookingsPage() {
           </div>
         )}
     </main>
+  )
+}
+
+export default function BookingsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="container section">
+          <div className="panel">
+            예약을 불러오는 중...
+          </div>
+        </main>
+      }
+    >
+      <BookingsContent />
+    </Suspense>
   )
 }
