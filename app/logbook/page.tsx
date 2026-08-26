@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 type Skill = {
@@ -44,6 +45,8 @@ const skillLabel: Record<string, string> = {
 }
 
 export default function LogbookPage() {
+  const router = useRouter()
+
   const [logs, setLogs] = useState<Logbook[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -60,7 +63,38 @@ export default function LogbookPage() {
         } = await supabase.auth.getUser()
 
         if (userError || !user) {
-          setError('로그인이 필요합니다.')
+          router.replace('/login')
+          return
+        }
+
+        const {
+          data: profile,
+          error: profileError,
+        } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (profileError) {
+          setError(
+            `사용자 권한을 확인하지 못했습니다: ${profileError.message}`
+          )
+          return
+        }
+
+        if (!profile) {
+          setError('사용자 프로필을 찾을 수 없습니다.')
+          return
+        }
+
+        if (profile.role === 'instructor') {
+          router.replace('/dashboard/instructor')
+          return
+        }
+
+        if (profile.role !== 'learner') {
+          router.replace('/')
           return
         }
 
@@ -95,7 +129,9 @@ export default function LogbookPage() {
             )
           `)
           .eq('learner_id', user.id)
-          .order('created_at', { ascending: false })
+          .order('created_at', {
+            ascending: false,
+          })
 
         if (error) {
           setError(
@@ -104,48 +140,67 @@ export default function LogbookPage() {
           return
         }
 
-        setLogs((data ?? []) as unknown as Logbook[])
+        setLogs(
+          (data ?? []) as unknown as Logbook[]
+        )
       } catch (err) {
         console.error(err)
-        setError('Logbook을 불러오는 중 오류가 발생했습니다.')
+
+        setError(
+          'Logbook을 불러오는 중 오류가 발생했습니다.'
+        )
       } finally {
         setLoading(false)
       }
     }
 
     loadLogbook()
-  }, [])
+  }, [router])
 
   const totalMinutes = logs.reduce(
-    (sum, log) => sum + Number(log.minutes || 0),
+    (sum, log) =>
+      sum + Number(log.minutes || 0),
     0
   )
 
   const totalHours = totalMinutes / 60
 
-  function getAverageSkill(skillKey: string) {
+  function getAverageSkill(
+    skillKey: string
+  ) {
     const values = logs
-      .flatMap((log) => log.skills || [])
-      .filter((skill) => skill.skill_key === skillKey)
-      .map((skill) => Number(skill.score))
+      .flatMap(
+        (log) => log.skills || []
+      )
+      .filter(
+        (skill) =>
+          skill.skill_key === skillKey
+      )
+      .map(
+        (skill) =>
+          Number(skill.score)
+      )
 
     if (values.length === 0) {
       return null
     }
 
     const total = values.reduce(
-      (sum, score) => sum + score,
+      (sum, score) =>
+        sum + score,
       0
     )
 
-    return Math.round(total / values.length)
+    return Math.round(
+      total / values.length
+    )
   }
 
   if (loading) {
     return (
       <main className="container section">
         <div className="panel">
-          Logbook을 불러오는 중...
+          사용자 권한을 확인하는 중...
         </div>
       </main>
     )
@@ -155,7 +210,10 @@ export default function LogbookPage() {
     return (
       <main className="container section">
         <div className="panel">
-          <strong>Logbook 오류</strong>
+          <strong>
+            Logbook 오류
+          </strong>
+
           <p>{error}</p>
         </div>
       </main>
@@ -166,8 +224,13 @@ export default function LogbookPage() {
     <main className="container section">
       <div className="pageHead">
         <div>
-          <span>YA TA LOGBOOK</span>
-          <h1>내 연수 기록</h1>
+          <span>
+            YA TA LOGBOOK
+          </span>
+
+          <h1>
+            내 연수 기록
+          </h1>
         </div>
       </div>
 
@@ -181,37 +244,61 @@ export default function LogbookPage() {
               : `${totalHours.toFixed(1)}h`}
           </b>
 
-          <small>실제 완료 수업 기준</small>
+          <small>
+            실제 완료 수업 기준
+          </small>
         </div>
 
         <div>
           <span>완료 수업</span>
-          <b>{logs.length}</b>
-          <small>Logbook 작성 완료</small>
+
+          <b>
+            {logs.length}
+          </b>
+
+          <small>
+            Logbook 작성 완료
+          </small>
         </div>
 
         <div>
-          <span>주차 숙련도</span>
+          <span>
+            주차 숙련도
+          </span>
 
           <b>
-            {getAverageSkill('parking') !== null
-              ? `${getAverageSkill('parking')}%`
+            {getAverageSkill(
+              'parking'
+            ) !== null
+              ? `${getAverageSkill(
+                  'parking'
+                )}%`
               : '-'}
           </b>
 
-          <small>최근 기록 평균</small>
+          <small>
+            최근 기록 평균
+          </small>
         </div>
 
         <div>
-          <span>차선 변경</span>
+          <span>
+            차선 변경
+          </span>
 
           <b>
-            {getAverageSkill('lane_change') !== null
-              ? `${getAverageSkill('lane_change')}%`
+            {getAverageSkill(
+              'lane_change'
+            ) !== null
+              ? `${getAverageSkill(
+                  'lane_change'
+                )}%`
               : '-'}
           </b>
 
-          <small>최근 기록 평균</small>
+          <small>
+            최근 기록 평균
+          </small>
         </div>
       </div>
 
@@ -224,11 +311,18 @@ export default function LogbookPage() {
             padding: 40,
           }}
         >
-          <h3>아직 연수 기록이 없습니다.</h3>
+          <h3>
+            아직 연수 기록이 없습니다.
+          </h3>
 
-          <p style={{ color: '#777' }}>
-            수업이 완료되고 교관이 Logbook을 작성하면
-            이곳에 기록이 쌓입니다.
+          <p
+            style={{
+              color: '#777',
+            }}
+          >
+            수업이 완료되고 교관이
+            Logbook을 작성하면 이곳에
+            기록이 쌓입니다.
           </p>
         </section>
       )}
@@ -249,8 +343,10 @@ export default function LogbookPage() {
               <div
                 style={{
                   display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
+                  justifyContent:
+                    'space-between',
+                  alignItems:
+                    'flex-start',
                   gap: 20,
                   flexWrap: 'wrap',
                 }}
@@ -263,7 +359,9 @@ export default function LogbookPage() {
                       color: '#777',
                     }}
                   >
-                    {log.booking?.lesson_date || ''}
+                    {log.booking
+                      ?.lesson_date ||
+                      ''}
                   </span>
 
                   <h2
@@ -272,32 +370,54 @@ export default function LogbookPage() {
                       marginBottom: 6,
                     }}
                   >
-                    {log.booking?.lesson_type || '운전 연수'}
+                    {log.booking
+                      ?.lesson_type ||
+                      '운전 연수'}
                   </h2>
 
                   <p>
-                    {log.instructor?.name || '교관'} 교관
-                    {' · '}
-                    {log.minutes / 60}시간
+                    {log.instructor
+                      ?.name ||
+                      '교관'}{' '}
+                    교관 ·{' '}
+                    {log.minutes / 60}
+                    시간
                   </p>
 
                   {log.booking && (
-                    <p style={{ color: '#777' }}>
-                      {log.booking.start_time}
+                    <p
+                      style={{
+                        color:
+                          '#777',
+                      }}
+                    >
+                      {
+                        log.booking
+                          .start_time
+                      }
                       {' · '}
-                      {log.booking.pickup_text}
+                      {
+                        log.booking
+                          .pickup_text
+                      }
                       {' · '}
-                      {log.instructor?.vehicle || '교육차량'}
+                      {log
+                        .instructor
+                        ?.vehicle ||
+                        '교육차량'}
                     </p>
                   )}
                 </div>
 
                 <div
                   style={{
-                    padding: '9px 13px',
+                    padding:
+                      '9px 13px',
                     borderRadius: 20,
-                    background: '#e8f7ee',
-                    color: '#16803a',
+                    background:
+                      '#e8f7ee',
+                    color:
+                      '#16803a',
                     fontWeight: 700,
                   }}
                 >
@@ -309,10 +429,13 @@ export default function LogbookPage() {
                 style={{
                   marginTop: 22,
                   paddingTop: 20,
-                  borderTop: '1px solid #eee',
+                  borderTop:
+                    '1px solid #eee',
                 }}
               >
-                <h3>숙련도</h3>
+                <h3>
+                  숙련도
+                </h3>
 
                 <div
                   style={{
@@ -323,49 +446,71 @@ export default function LogbookPage() {
                     marginTop: 14,
                   }}
                 >
-                  {(log.skills || []).map((skill) => (
-                    <div
-                      key={skill.skill_key}
-                      style={{
-                        padding: 14,
-                        borderRadius: 12,
-                        background: '#f7f7f7',
-                      }}
-                    >
+                  {(log.skills ||
+                    []).map(
+                    (skill) => (
                       <div
+                        key={
+                          skill.skill_key
+                        }
                         style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          gap: 10,
-                        }}
-                      >
-                        <strong>
-                          {skillLabel[skill.skill_key] ||
-                            skill.skill_key}
-                        </strong>
-
-                        <b>{skill.score}%</b>
-                      </div>
-
-                      <div
-                        style={{
-                          height: 7,
-                          background: '#e5e5e5',
-                          borderRadius: 20,
-                          marginTop: 10,
-                          overflow: 'hidden',
+                          padding: 14,
+                          borderRadius:
+                            12,
+                          background:
+                            '#f7f7f7',
                         }}
                       >
                         <div
                           style={{
-                            height: '100%',
-                            width: `${skill.score}%`,
-                            background: '#ff4b12',
+                            display:
+                              'flex',
+                            justifyContent:
+                              'space-between',
+                            gap: 10,
                           }}
-                        />
+                        >
+                          <strong>
+                            {skillLabel[
+                              skill
+                                .skill_key
+                            ] ||
+                              skill.skill_key}
+                          </strong>
+
+                          <b>
+                            {
+                              skill.score
+                            }
+                            %
+                          </b>
+                        </div>
+
+                        <div
+                          style={{
+                            height: 7,
+                            background:
+                              '#e5e5e5',
+                            borderRadius:
+                              20,
+                            marginTop: 10,
+                            overflow:
+                              'hidden',
+                          }}
+                        >
+                          <div
+                            style={{
+                              height:
+                                '100%',
+                              width: `${skill.score}%`,
+                              background:
+                                '#ff4b12',
+                            }}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               </div>
 
@@ -373,13 +518,22 @@ export default function LogbookPage() {
                 style={{
                   marginTop: 22,
                   paddingTop: 20,
-                  borderTop: '1px solid #eee',
+                  borderTop:
+                    '1px solid #eee',
                 }}
               >
-                <h3>교관 코멘트</h3>
+                <h3>
+                  교관 코멘트
+                </h3>
 
-                <p style={{ lineHeight: 1.7 }}>
-                  {log.instructor_note}
+                <p
+                  style={{
+                    lineHeight: 1.7,
+                  }}
+                >
+                  {
+                    log.instructor_note
+                  }
                 </p>
               </div>
 
@@ -389,10 +543,13 @@ export default function LogbookPage() {
                     marginTop: 18,
                     padding: 16,
                     borderRadius: 12,
-                    background: '#fff5ef',
+                    background:
+                      '#fff5ef',
                   }}
                 >
-                  <strong>다음 수업 목표</strong>
+                  <strong>
+                    다음 수업 목표
+                  </strong>
 
                   <p
                     style={{
