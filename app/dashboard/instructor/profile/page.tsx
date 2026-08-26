@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 type InstructorProfile = {
@@ -20,7 +21,10 @@ type InstructorProfile = {
 }
 
 export default function InstructorProfilePage() {
-  const [profile, setProfile] = useState<InstructorProfile | null>(null)
+  const router = useRouter()
+
+  const [profile, setProfile] =
+    useState<InstructorProfile | null>(null)
 
   const [name, setName] = useState('')
   const [area, setArea] = useState('')
@@ -29,11 +33,15 @@ export default function InstructorProfilePage() {
   const [vehicleYear, setVehicleYear] = useState('')
   const [transmission, setTransmission] = useState('자동')
   const [dualBrake, setDualBrake] = useState(false)
-  const [insuranceVerified, setInsuranceVerified] = useState(false)
+  const [insuranceVerified, setInsuranceVerified] =
+    useState(false)
   const [intro, setIntro] = useState('')
 
-  const [specialties, setSpecialties] = useState<string[]>([])
-  const [licenses, setLicenses] = useState<string[]>([])
+  const [specialties, setSpecialties] =
+    useState<string[]>([])
+
+  const [licenses, setLicenses] =
+    useState<string[]>([])
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -71,7 +79,35 @@ export default function InstructorProfilePage() {
         } = await supabase.auth.getUser()
 
         if (userError || !user) {
-          setError('로그인이 필요합니다.')
+          router.replace('/login')
+          return
+        }
+
+        const {
+          data: userProfile,
+          error: profileError,
+        } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (profileError) {
+          setError(
+            `사용자 권한을 확인하지 못했습니다: ${profileError.message}`
+          )
+          return
+        }
+
+        if (!userProfile) {
+          setError(
+            '사용자 프로필을 찾을 수 없습니다.'
+          )
+          return
+        }
+
+        if (userProfile.role !== 'instructor') {
+          router.replace('/instructors')
           return
         }
 
@@ -96,49 +132,78 @@ export default function InstructorProfilePage() {
           .maybeSingle()
 
         if (error) {
-          setError(`교관 프로필을 불러오지 못했습니다: ${error.message}`)
+          setError(
+            `교관 프로필을 불러오지 못했습니다: ${error.message}`
+          )
           return
         }
 
         if (!data) {
-          setError('현재 계정에 연결된 교관 프로필이 없습니다.')
+          router.replace('/instructor/register')
           return
         }
 
-        const instructor = data as InstructorProfile
+        const instructor =
+          data as InstructorProfile
 
         setProfile(instructor)
 
         setName(instructor.name || '')
         setArea(instructor.area || '')
-        setSpecialties(instructor.specialties || [])
-        setLicenses(instructor.licenses || [])
-        setLicenseNumber(instructor.license_number || '')
-        setVehicle(instructor.vehicle || '')
+        setSpecialties(
+          instructor.specialties || []
+        )
+        setLicenses(
+          instructor.licenses || []
+        )
+        setLicenseNumber(
+          instructor.license_number || ''
+        )
+        setVehicle(
+          instructor.vehicle || ''
+        )
+
         setVehicleYear(
           instructor.vehicle_year
             ? String(instructor.vehicle_year)
             : ''
         )
-        setTransmission(instructor.transmission || '자동')
-        setDualBrake(instructor.dual_brake || false)
-        setInsuranceVerified(instructor.insurance_verified || false)
-        setIntro(instructor.intro || '')
+
+        setTransmission(
+          instructor.transmission || '자동'
+        )
+
+        setDualBrake(
+          instructor.dual_brake || false
+        )
+
+        setInsuranceVerified(
+          instructor.insurance_verified || false
+        )
+
+        setIntro(
+          instructor.intro || ''
+        )
       } catch (err) {
         console.error(err)
-        setError('교관 프로필을 불러오는 중 오류가 발생했습니다.')
+
+        setError(
+          '교관 프로필을 불러오는 중 오류가 발생했습니다.'
+        )
       } finally {
         setLoading(false)
       }
     }
 
     loadProfile()
-  }, [])
+  }, [router])
 
   function toggleSpecialty(value: string) {
     setSpecialties((current) =>
       current.includes(value)
-        ? current.filter((item) => item !== value)
+        ? current.filter(
+            (item) => item !== value
+          )
         : [...current, value]
     )
   }
@@ -146,7 +211,9 @@ export default function InstructorProfilePage() {
   function toggleLicense(value: string) {
     setLicenses((current) =>
       current.includes(value)
-        ? current.filter((item) => item !== value)
+        ? current.filter(
+            (item) => item !== value
+          )
         : [...current, value]
     )
   }
@@ -155,27 +222,37 @@ export default function InstructorProfilePage() {
     if (!profile) return
 
     if (!name.trim()) {
-      setMessage('교관 이름을 입력해주세요.')
+      setMessage(
+        '교관 이름을 입력해주세요.'
+      )
       return
     }
 
     if (!area.trim()) {
-      setMessage('활동지역을 입력해주세요.')
+      setMessage(
+        '활동지역을 입력해주세요.'
+      )
       return
     }
 
     if (!vehicle.trim()) {
-      setMessage('교육차량을 입력해주세요.')
+      setMessage(
+        '교육차량을 입력해주세요.'
+      )
       return
     }
 
     if (specialties.length === 0) {
-      setMessage('전문 연수 분야를 1개 이상 선택해주세요.')
+      setMessage(
+        '전문 연수 분야를 1개 이상 선택해주세요.'
+      )
       return
     }
 
     if (licenses.length === 0) {
-      setMessage('자격 / 교육 가능 종별을 1개 이상 선택해주세요.')
+      setMessage(
+        '자격 / 교육 가능 종별을 1개 이상 선택해주세요.'
+      )
       return
     }
 
@@ -183,17 +260,24 @@ export default function InstructorProfilePage() {
       setSaving(true)
       setMessage('')
 
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        router.replace('/login')
+        return
+      }
+
       const { error } = await supabase
         .from('instructors')
         .update({
           name: name.trim(),
           area: area.trim(),
-
           specialties,
           licenses,
-
-          license_number: licenseNumber.trim() || null,
-
+          license_number:
+            licenseNumber.trim() || null,
           vehicle: vehicle.trim(),
 
           vehicle_year: vehicleYear
@@ -201,24 +285,32 @@ export default function InstructorProfilePage() {
             : null,
 
           transmission,
-
           dual_brake: dualBrake,
 
-          insurance_verified: insuranceVerified,
+          insurance_verified:
+            insuranceVerified,
 
           intro: intro.trim() || null,
         })
         .eq('id', profile.id)
+        .eq('user_id', user.id)
 
       if (error) {
-        setMessage(`저장 실패: ${error.message}`)
+        setMessage(
+          `저장 실패: ${error.message}`
+        )
         return
       }
 
-      setMessage('교관 프로필이 저장되었습니다.')
+      setMessage(
+        '교관 프로필이 저장되었습니다.'
+      )
     } catch (err) {
       console.error(err)
-      setMessage('교관 프로필 저장 중 오류가 발생했습니다.')
+
+      setMessage(
+        '교관 프로필 저장 중 오류가 발생했습니다.'
+      )
     } finally {
       setSaving(false)
     }
@@ -236,7 +328,7 @@ export default function InstructorProfilePage() {
     return (
       <main className="container section">
         <div className="panel">
-          교관 프로필을 불러오는 중...
+          교관 권한을 확인하는 중...
         </div>
       </main>
     )
@@ -246,7 +338,10 @@ export default function InstructorProfilePage() {
     return (
       <main className="container section">
         <div className="panel">
-          <strong>교관 프로필 오류</strong>
+          <strong>
+            교관 프로필 오류
+          </strong>
+
           <p>{error}</p>
         </div>
       </main>
@@ -267,8 +362,13 @@ export default function InstructorProfilePage() {
       >
         <div className="pageHead">
           <div>
-            <span>INSTRUCTOR PROFILE</span>
-            <h1>교관 프로필 관리</h1>
+            <span>
+              INSTRUCTOR PROFILE
+            </span>
+
+            <h1>
+              교관 프로필 관리
+            </h1>
           </div>
 
           <button
@@ -276,7 +376,9 @@ export default function InstructorProfilePage() {
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? '저장 중...' : '변경사항 저장'}
+            {saving
+              ? '저장 중...'
+              : '변경사항 저장'}
           </button>
         </div>
 
@@ -298,25 +400,43 @@ export default function InstructorProfilePage() {
               }}
             >
               <label>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    marginBottom: 8,
+                  }}
+                >
                   교관 이름
                 </div>
 
                 <input
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) =>
+                    setName(
+                      e.target.value
+                    )
+                  }
                   style={inputStyle}
                 />
               </label>
 
               <label>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    marginBottom: 8,
+                  }}
+                >
                   활동지역
                 </div>
 
                 <input
                   value={area}
-                  onChange={(e) => setArea(e.target.value)}
+                  onChange={(e) =>
+                    setArea(
+                      e.target.value
+                    )
+                  }
                   style={inputStyle}
                 />
               </label>
@@ -324,7 +444,9 @@ export default function InstructorProfilePage() {
           </section>
 
           <section>
-            <h3>전문 연수 분야</h3>
+            <h3>
+              전문 연수 분야
+            </h3>
 
             <div
               style={{
@@ -334,33 +456,45 @@ export default function InstructorProfilePage() {
                 marginTop: 14,
               }}
             >
-              {specialtyOptions.map((item) => {
-                const selected = specialties.includes(item)
+              {specialtyOptions.map(
+                (item) => {
+                  const selected =
+                    specialties.includes(
+                      item
+                    )
 
-                return (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => toggleSpecialty(item)}
-                    style={{
-                      padding: '9px 13px',
-                      borderRadius: 20,
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() =>
+                        toggleSpecialty(
+                          item
+                        )
+                      }
+                      style={{
+                        padding:
+                          '9px 13px',
+                        borderRadius: 20,
 
-                      border: selected
-                        ? '1px solid #ff4b12'
-                        : '1px solid #ddd',
+                        border: selected
+                          ? '1px solid #ff4b12'
+                          : '1px solid #ddd',
 
-                      background: selected
-                        ? '#fff0e9'
-                        : '#fff',
+                        background:
+                          selected
+                            ? '#fff0e9'
+                            : '#fff',
 
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {item}
-                  </button>
-                )
-              })}
+                        cursor:
+                          'pointer',
+                      }}
+                    >
+                      {item}
+                    </button>
+                  )
+                }
+              )}
             </div>
           </section>
 
@@ -375,33 +509,45 @@ export default function InstructorProfilePage() {
                 marginTop: 14,
               }}
             >
-              {licenseOptions.map((item) => {
-                const selected = licenses.includes(item)
+              {licenseOptions.map(
+                (item) => {
+                  const selected =
+                    licenses.includes(
+                      item
+                    )
 
-                return (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => toggleLicense(item)}
-                    style={{
-                      padding: '9px 13px',
-                      borderRadius: 20,
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() =>
+                        toggleLicense(
+                          item
+                        )
+                      }
+                      style={{
+                        padding:
+                          '9px 13px',
+                        borderRadius: 20,
 
-                      border: selected
-                        ? '1px solid #ff4b12'
-                        : '1px solid #ddd',
+                        border: selected
+                          ? '1px solid #ff4b12'
+                          : '1px solid #ddd',
 
-                      background: selected
-                        ? '#fff0e9'
-                        : '#fff',
+                        background:
+                          selected
+                            ? '#fff0e9'
+                            : '#fff',
 
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {item}
-                  </button>
-                )
-              })}
+                        cursor:
+                          'pointer',
+                      }}
+                    >
+                      {item}
+                    </button>
+                  )
+                }
+              )}
             </div>
 
             <label
@@ -410,14 +556,21 @@ export default function InstructorProfilePage() {
                 marginTop: 18,
               }}
             >
-              <div style={{ fontWeight: 700, marginBottom: 8 }}>
+              <div
+                style={{
+                  fontWeight: 700,
+                  marginBottom: 8,
+                }}
+              >
                 자격증 번호
               </div>
 
               <input
                 value={licenseNumber}
                 onChange={(e) =>
-                  setLicenseNumber(e.target.value)
+                  setLicenseNumber(
+                    e.target.value
+                  )
                 }
                 placeholder="자격증 또는 관련 등록번호"
                 style={inputStyle}
@@ -436,19 +589,33 @@ export default function InstructorProfilePage() {
               }}
             >
               <label>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    marginBottom: 8,
+                  }}
+                >
                   차량
                 </div>
 
                 <input
                   value={vehicle}
-                  onChange={(e) => setVehicle(e.target.value)}
+                  onChange={(e) =>
+                    setVehicle(
+                      e.target.value
+                    )
+                  }
                   style={inputStyle}
                 />
               </label>
 
               <label>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    marginBottom: 8,
+                  }}
+                >
                   차량 연식
                 </div>
 
@@ -456,26 +623,40 @@ export default function InstructorProfilePage() {
                   type="number"
                   value={vehicleYear}
                   onChange={(e) =>
-                    setVehicleYear(e.target.value)
+                    setVehicleYear(
+                      e.target.value
+                    )
                   }
                   style={inputStyle}
                 />
               </label>
 
               <label>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    marginBottom: 8,
+                  }}
+                >
                   변속기
                 </div>
 
                 <select
                   value={transmission}
                   onChange={(e) =>
-                    setTransmission(e.target.value)
+                    setTransmission(
+                      e.target.value
+                    )
                   }
                   style={inputStyle}
                 >
-                  <option value="자동">자동</option>
-                  <option value="수동">수동</option>
+                  <option value="자동">
+                    자동
+                  </option>
+
+                  <option value="수동">
+                    수동
+                  </option>
                 </select>
               </label>
 
@@ -490,7 +671,9 @@ export default function InstructorProfilePage() {
                   type="checkbox"
                   checked={dualBrake}
                   onChange={(e) =>
-                    setDualBrake(e.target.checked)
+                    setDualBrake(
+                      e.target.checked
+                    )
                   }
                 />
 
@@ -506,9 +689,13 @@ export default function InstructorProfilePage() {
               >
                 <input
                   type="checkbox"
-                  checked={insuranceVerified}
+                  checked={
+                    insuranceVerified
+                  }
                   onChange={(e) =>
-                    setInsuranceVerified(e.target.checked)
+                    setInsuranceVerified(
+                      e.target.checked
+                    )
                   }
                 />
 
@@ -522,7 +709,11 @@ export default function InstructorProfilePage() {
 
             <textarea
               value={intro}
-              onChange={(e) => setIntro(e.target.value)}
+              onChange={(e) =>
+                setIntro(
+                  e.target.value
+                )
+              }
               rows={6}
               style={{
                 ...inputStyle,
