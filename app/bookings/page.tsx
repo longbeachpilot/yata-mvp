@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { CalendarDays } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
@@ -29,6 +29,7 @@ const statusLabel: Record<Booking['status'], string> = {
 }
 
 function BookingsContent() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const created = searchParams.get('created') === '1'
 
@@ -43,11 +44,44 @@ function BookingsContent() {
 
       const {
         data: { user },
+        error: userError,
       } = await supabase.auth.getUser()
 
-      if (!user) {
-        setError('로그인이 필요합니다.')
+      if (userError || !user) {
+        router.replace('/login')
+        return
+      }
+
+      const {
+        data: profile,
+        error: profileError,
+      } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (profileError) {
+        setError(
+          `사용자 권한을 확인하지 못했습니다: ${profileError.message}`
+        )
         setLoading(false)
+        return
+      }
+
+      if (!profile) {
+        setError('사용자 프로필을 찾을 수 없습니다.')
+        setLoading(false)
+        return
+      }
+
+      if (profile.role === 'instructor') {
+        router.replace('/dashboard/instructor')
+        return
+      }
+
+      if (profile.role !== 'learner') {
+        router.replace('/')
         return
       }
 
@@ -78,7 +112,7 @@ function BookingsContent() {
     }
 
     loadBookings()
-  }, [])
+  }, [router])
 
   const getStatusStyle = (status: Booking['status']) => {
     if (status === 'confirmed') {
@@ -106,6 +140,16 @@ function BookingsContent() {
       background: '#fff4e8',
       color: '#d96700',
     }
+  }
+
+  if (loading) {
+    return (
+      <main className="container section">
+        <div className="panel">
+          사용자 권한을 확인하는 중...
+        </div>
+      </main>
+    )
   }
 
   return (
@@ -142,13 +186,7 @@ function BookingsContent() {
         </div>
       )}
 
-      {loading && (
-        <div className="panel">
-          예약을 불러오는 중...
-        </div>
-      )}
-
-      {!loading && error && (
+      {error && (
         <div className="panel">
           <strong>
             예약 정보를 불러오지 못했습니다.
@@ -158,104 +196,99 @@ function BookingsContent() {
         </div>
       )}
 
-      {!loading &&
-        !error &&
-        bookings.length === 0 && (
-          <div
-            className="panel"
-            style={{
-              textAlign: 'center',
-              padding: 40,
-            }}
+      {!error && bookings.length === 0 && (
+        <div
+          className="panel"
+          style={{
+            textAlign: 'center',
+            padding: 40,
+          }}
+        >
+          <CalendarDays
+            size={34}
+            style={{ marginBottom: 12 }}
+          />
+
+          <h3>아직 예약이 없습니다.</h3>
+
+          <p style={{ color: '#777' }}>
+            나에게 맞는 교관을 찾고 첫 연수를
+            예약해보세요.
+          </p>
+
+          <Link
+            href="/instructors"
+            className="primaryBtn"
+            style={{ marginTop: 8 }}
           >
-            <CalendarDays
-              size={34}
-              style={{ marginBottom: 12 }}
-            />
+            교관 찾기
+          </Link>
+        </div>
+      )}
 
-            <h3>아직 예약이 없습니다.</h3>
+      {!error && bookings.length > 0 && (
+        <div className="panel">
+          {bookings.map((booking) => {
+            const d = new Date(
+              `${booking.lesson_date}T00:00:00`
+            )
 
-            <p style={{ color: '#777' }}>
-              나에게 맞는 교관을 찾고 첫 연수를
-              예약해보세요.
-            </p>
+            const day = String(
+              d.getDate()
+            ).padStart(2, '0')
 
-            <Link
-              href="/instructors"
-              className="primaryBtn"
-              style={{ marginTop: 8 }}
-            >
-              교관 찾기
-            </Link>
-          </div>
-        )}
+            const month = d
+              .toLocaleString('en-US', {
+                month: 'short',
+              })
+              .toUpperCase()
 
-      {!loading &&
-        !error &&
-        bookings.length > 0 && (
-          <div className="panel">
-            {bookings.map((booking) => {
-              const d = new Date(
-                `${booking.lesson_date}T00:00:00`
-              )
-
-              const day = String(
-                d.getDate()
-              ).padStart(2, '0')
-
-              const month = d
-                .toLocaleString('en-US', {
-                  month: 'short',
-                })
-                .toUpperCase()
-
-              return (
-                <div
-                  className="bookingRow"
-                  key={booking.id}
-                >
-                  <div className="dateBox">
-                    <b>{day}</b>
-                    <span>{month}</span>
-                  </div>
-
-                  <div>
-                    <h3>
-                      {booking.lesson_type}
-                    </h3>
-
-                    <p>
-                      {booking.instructor?.name ||
-                        '교관'}{' '}
-                      교관 · {booking.start_time} ·{' '}
-                      {booking.duration_minutes / 60}
-                      시간 · {booking.pickup_text}
-                    </p>
-
-                    <p>
-                      {booking.instructor?.vehicle ||
-                        '교육차량'}{' '}
-                      ·{' '}
-                      {booking.amount.toLocaleString(
-                        'ko-KR'
-                      )}
-                      원
-                    </p>
-                  </div>
-
-                  <span
-                    className="status"
-                    style={getStatusStyle(
-                      booking.status
-                    )}
-                  >
-                    {statusLabel[booking.status]}
-                  </span>
+            return (
+              <div
+                className="bookingRow"
+                key={booking.id}
+              >
+                <div className="dateBox">
+                  <b>{day}</b>
+                  <span>{month}</span>
                 </div>
-              )
-            })}
-          </div>
-        )}
+
+                <div>
+                  <h3>
+                    {booking.lesson_type}
+                  </h3>
+
+                  <p>
+                    {booking.instructor?.name || '교관'}{' '}
+                    교관 · {booking.start_time} ·{' '}
+                    {booking.duration_minutes / 60}
+                    시간 · {booking.pickup_text}
+                  </p>
+
+                  <p>
+                    {booking.instructor?.vehicle ||
+                      '교육차량'}{' '}
+                    ·{' '}
+                    {booking.amount.toLocaleString(
+                      'ko-KR'
+                    )}
+                    원
+                  </p>
+                </div>
+
+                <span
+                  className="status"
+                  style={getStatusStyle(
+                    booking.status
+                  )}
+                >
+                  {statusLabel[booking.status]}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </main>
   )
 }
@@ -266,7 +299,7 @@ export default function BookingsPage() {
       fallback={
         <main className="container section">
           <div className="panel">
-            예약을 불러오는 중...
+            사용자 권한을 확인하는 중...
           </div>
         </main>
       }
