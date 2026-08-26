@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Star,
   Car,
+  Clock3,
 } from 'lucide-react'
 
 import { supabase } from '@/lib/supabase'
@@ -39,7 +40,9 @@ export default function DetailPage() {
   const params = useParams()
   const id = params.id as string
 
-  const [instructor, setInstructor] = useState<Instructor | null>(null)
+  const [instructor, setInstructor] =
+    useState<Instructor | null>(null)
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -87,7 +90,10 @@ export default function DetailPage() {
         setInstructor(data as Instructor)
       } catch (err) {
         console.error(err)
-        setError('교관 정보를 불러오는 중 오류가 발생했습니다.')
+
+        setError(
+          '교관 정보를 불러오는 중 오류가 발생했습니다.'
+        )
       } finally {
         setLoading(false)
       }
@@ -112,7 +118,10 @@ export default function DetailPage() {
     return (
       <main className="container section pageTop">
         <div className="panel">
-          <strong>교관 정보를 불러오지 못했습니다.</strong>
+          <strong>
+            교관 정보를 불러오지 못했습니다.
+          </strong>
+
           <p>{error}</p>
 
           <Link
@@ -175,7 +184,8 @@ export default function DetailPage() {
             <h3>교관 소개</h3>
 
             <p>
-              {i.intro || '아직 등록된 소개가 없습니다.'}
+              {i.intro ||
+                '아직 등록된 소개가 없습니다.'}
             </p>
 
             <div className="chips">
@@ -240,7 +250,8 @@ export default function DetailPage() {
                     ? `${i.vehicle_year}년식`
                     : '연식 미등록'}
                   {' · '}
-                  {i.transmission || '변속기 미등록'}
+                  {i.transmission ||
+                    '변속기 미등록'}
                 </span>
 
                 <small>
@@ -288,9 +299,10 @@ export default function DetailPage() {
                 style={{
                   padding: 14,
                   borderRadius: 12,
-                  background: i.insurance_verified
-                    ? '#eef8f1'
-                    : '#f7f7f7',
+                  background:
+                    i.insurance_verified
+                      ? '#eef8f1'
+                      : '#f7f7f7',
                 }}
               >
                 <strong>
@@ -327,8 +339,9 @@ export default function DetailPage() {
               >
                 <ShieldCheck size={15} />
 
-                자격·보험·교육차량 정보는 향후 운영자 검증 절차를 거쳐
-                인증 배지로 표시할 예정입니다.
+                자격·보험·교육차량 정보는 향후
+                운영자 검증 절차를 거쳐 인증
+                배지로 표시할 예정입니다.
               </small>
             </div>
           </div>
@@ -340,44 +353,103 @@ export default function DetailPage() {
             <span>/ 기본 2시간</span>
           </div>
 
-          <label>
-            교육 목적
-
-            <select>
-              {i.specialties?.map((item) => (
-                <option
-                  key={item}
-                  value={item}
-                >
-                  {item}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            날짜
-
-            <button
-              type="button"
-              className="inputLike"
+          <div
+            style={{
+              display: 'grid',
+              gap: 12,
+              marginBottom: 20,
+            }}
+          >
+            <div
+              style={{
+                padding: 14,
+                border: '1px solid #e9e9e9',
+                borderRadius: 12,
+                background: '#fafafa',
+              }}
             >
-              <CalendarDays size={17} />
-              날짜 선택
-            </button>
-          </label>
+              <strong
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 7,
+                  marginBottom: 6,
+                }}
+              >
+                <CalendarDays size={17} />
+                날짜
+              </strong>
 
-          <label>
-            시작 장소
+              <span
+                style={{
+                  color: '#777',
+                  fontSize: 14,
+                }}
+              >
+                예약 화면에서 선택
+              </span>
+            </div>
 
-            <button
-              type="button"
-              className="inputLike"
+            <div
+              style={{
+                padding: 14,
+                border: '1px solid #e9e9e9',
+                borderRadius: 12,
+                background: '#fafafa',
+              }}
             >
-              <MapPin size={17} />
-              {i.area}
-            </button>
-          </label>
+              <strong
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 7,
+                  marginBottom: 6,
+                }}
+              >
+                <Clock3 size={17} />
+                시작 시간
+              </strong>
+
+              <span
+                style={{
+                  color: '#777',
+                  fontSize: 14,
+                }}
+              >
+                예약 화면에서 선택
+              </span>
+            </div>
+
+            <div
+              style={{
+                padding: 14,
+                border: '1px solid #e9e9e9',
+                borderRadius: 12,
+                background: '#fafafa',
+              }}
+            >
+              <strong
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 7,
+                  marginBottom: 6,
+                }}
+              >
+                <MapPin size={17} />
+                시작 장소
+              </strong>
+
+              <span
+                style={{
+                  color: '#777',
+                  fontSize: 14,
+                }}
+              >
+                기본 활동지역: {i.area}
+              </span>
+            </div>
+          </div>
 
           {i.next_slot && (
             <div
@@ -404,11 +476,12 @@ export default function DetailPage() {
             className="primaryBtn full"
             href={`/book?instructor=${i.id}`}
           >
-            예약하기
+            예약 정보 선택하기
           </Link>
 
           <small className="centerText">
-            예약 요청 후 교관 확인을 거쳐 확정됩니다.
+            다음 화면에서 교육 목적, 날짜,
+            시간, 시작 장소를 선택합니다.
           </small>
         </aside>
       </div>
