@@ -1,0 +1,496 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+
+export default function InstructorRegisterPage() {
+  const router = useRouter()
+
+  const [name, setName] = useState('')
+  const [area, setArea] = useState('')
+  const [licenseNumber, setLicenseNumber] = useState('')
+
+  const [vehicle, setVehicle] = useState('')
+  const [vehicleYear, setVehicleYear] = useState('')
+  const [transmission, setTransmission] = useState('자동')
+  const [dualBrake, setDualBrake] = useState(false)
+  const [insuranceVerified, setInsuranceVerified] = useState(false)
+
+  const [intro, setIntro] = useState('')
+  const [specialties, setSpecialties] = useState<string[]>([])
+  const [licenses, setLicenses] = useState<string[]>([])
+
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
+
+  const specialtyOptions = [
+    '장롱면허',
+    '초보운전',
+    '주차',
+    '도심주행',
+    '고속도로',
+    '야간운전',
+    '장거리',
+    '차선변경',
+  ]
+
+  const licenseOptions = [
+    '1종 보통',
+    '2종 보통',
+    '1종 대형',
+    '원동기',
+    '2종 소형',
+  ]
+
+  function toggleSpecialty(value: string) {
+    setSpecialties((current) =>
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value]
+    )
+  }
+
+  function toggleLicense(value: string) {
+    setLicenses((current) =>
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value]
+    )
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+
+    setLoading(true)
+    setMessage('')
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      setMessage('로그인이 필요합니다.')
+      setLoading(false)
+      return
+    }
+
+    if (!name.trim()) {
+      setMessage('교관 이름을 입력해주세요.')
+      setLoading(false)
+      return
+    }
+
+    if (!area.trim()) {
+      setMessage('활동지역을 입력해주세요.')
+      setLoading(false)
+      return
+    }
+
+    if (specialties.length === 0) {
+      setMessage('전문 연수 분야를 1개 이상 선택해주세요.')
+      setLoading(false)
+      return
+    }
+
+    if (licenses.length === 0) {
+      setMessage('자격 / 교육 가능 종별을 1개 이상 선택해주세요.')
+      setLoading(false)
+      return
+    }
+
+    if (!vehicle.trim()) {
+      setMessage('교육차량을 입력해주세요.')
+      setLoading(false)
+      return
+    }
+
+    const {
+      data: existingInstructor,
+      error: existingError,
+    } = await supabase
+      .from('instructors')
+      .select('id, name')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (existingError) {
+      setMessage(`기존 교관 정보 확인 실패: ${existingError.message}`)
+      setLoading(false)
+      return
+    }
+
+    if (existingInstructor) {
+      setMessage(
+        `이미 "${existingInstructor.name}" 교관 프로필이 연결되어 있습니다.`
+      )
+      setLoading(false)
+      return
+    }
+
+    const { error: insertError } = await supabase
+      .from('instructors')
+      .insert({
+        user_id: user.id,
+
+        name: name.trim(),
+        area: area.trim(),
+
+        specialties,
+        licenses,
+
+        license_number: licenseNumber.trim() || null,
+
+        vehicle: vehicle.trim(),
+        vehicle_year: vehicleYear ? Number(vehicleYear) : null,
+        transmission,
+
+        dual_brake: dualBrake,
+        insurance_verified: insuranceVerified,
+
+        intro: intro.trim() || null,
+
+        rating: 0,
+        reviews: 0,
+        lessons: 0,
+
+        next_slot: null,
+        active: true,
+      })
+
+    if (insertError) {
+      setMessage(`교관 등록 실패: ${insertError.message}`)
+      setLoading(false)
+      return
+    }
+
+    await supabase
+      .from('profiles')
+      .update({ role: 'instructor' })
+      .eq('id', user.id)
+
+    setMessage('교관 등록이 완료되었습니다.')
+
+    setTimeout(() => {
+      router.push('/dashboard/instructor')
+    }, 800)
+
+    setLoading(false)
+  }
+
+  const inputStyle = {
+    width: '100%',
+    padding: '14px',
+    borderRadius: 10,
+    border: '1px solid #ddd',
+    fontSize: 15,
+  }
+
+  return (
+    <main className="container section pageTop">
+      <div
+        style={{
+          maxWidth: 760,
+          margin: '0 auto',
+        }}
+      >
+        <div className="pageTitle">
+          <span>INSTRUCTOR REGISTER</span>
+
+          <h1>교관 사전등록</h1>
+
+          <p>
+            학생이 안심하고 교관을 선택할 수 있도록
+            자격과 교육차량 정보를 등록해주세요.
+          </p>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="panel"
+          style={{
+            marginTop: 30,
+            display: 'grid',
+            gap: 30,
+          }}
+        >
+          <section>
+            <h3>기본 정보</h3>
+
+            <div
+              style={{
+                display: 'grid',
+                gap: 18,
+                marginTop: 16,
+              }}
+            >
+              <label>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                  교관 이름
+                </div>
+
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="예: 김민수"
+                  style={inputStyle}
+                />
+              </label>
+
+              <label>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                  활동지역
+                </div>
+
+                <input
+                  type="text"
+                  value={area}
+                  onChange={(e) => setArea(e.target.value)}
+                  placeholder="예: 서울 강남·서초"
+                  style={inputStyle}
+                />
+              </label>
+            </div>
+          </section>
+
+          <section>
+            <h3>전문 연수 분야</h3>
+
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 8,
+                marginTop: 14,
+              }}
+            >
+              {specialtyOptions.map((item) => {
+                const selected = specialties.includes(item)
+
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => toggleSpecialty(item)}
+                    style={{
+                      padding: '9px 13px',
+                      borderRadius: 20,
+                      border: selected
+                        ? '1px solid #ff4b12'
+                        : '1px solid #ddd',
+                      background: selected ? '#fff0e9' : '#fff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {item}
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+
+          <section>
+            <h3>자격 정보</h3>
+
+            <div style={{ marginTop: 14 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                }}
+              >
+                {licenseOptions.map((item) => {
+                  const selected = licenses.includes(item)
+
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => toggleLicense(item)}
+                      style={{
+                        padding: '9px 13px',
+                        borderRadius: 20,
+                        border: selected
+                          ? '1px solid #ff4b12'
+                          : '1px solid #ddd',
+                        background: selected ? '#fff0e9' : '#fff',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {item}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <label style={{ display: 'block', marginTop: 18 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                  자격증 번호
+                </div>
+
+                <input
+                  type="text"
+                  value={licenseNumber}
+                  onChange={(e) => setLicenseNumber(e.target.value)}
+                  placeholder="자격증 또는 관련 등록번호"
+                  style={inputStyle}
+                />
+              </label>
+            </div>
+          </section>
+
+          <section>
+            <h3>교육차량</h3>
+
+            <div
+              style={{
+                display: 'grid',
+                gap: 18,
+                marginTop: 16,
+              }}
+            >
+              <label>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                  차량
+                </div>
+
+                <input
+                  type="text"
+                  value={vehicle}
+                  onChange={(e) => setVehicle(e.target.value)}
+                  placeholder="예: 현대 아반떼 CN7"
+                  style={inputStyle}
+                />
+              </label>
+
+              <label>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                  차량 연식
+                </div>
+
+                <input
+                  type="number"
+                  value={vehicleYear}
+                  onChange={(e) => setVehicleYear(e.target.value)}
+                  placeholder="예: 2025"
+                  min="1990"
+                  max="2030"
+                  style={inputStyle}
+                />
+              </label>
+
+              <label>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                  변속기
+                </div>
+
+                <select
+                  value={transmission}
+                  onChange={(e) => setTransmission(e.target.value)}
+                  style={inputStyle}
+                >
+                  <option value="자동">자동</option>
+                  <option value="수동">수동</option>
+                </select>
+              </label>
+
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={dualBrake}
+                  onChange={(e) => setDualBrake(e.target.checked)}
+                />
+                <span>교육용 보조브레이크 장착</span>
+              </label>
+
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={insuranceVerified}
+                  onChange={(e) =>
+                    setInsuranceVerified(e.target.checked)
+                  }
+                />
+                <span>운전연수 관련 보험 확인</span>
+              </label>
+            </div>
+          </section>
+
+          <section>
+            <h3>교관 소개</h3>
+
+            <textarea
+              value={intro}
+              onChange={(e) => setIntro(e.target.value)}
+              placeholder="교육 방식, 경력, 전문 분야 등을 소개해주세요."
+              rows={6}
+              style={{
+                ...inputStyle,
+                marginTop: 14,
+                resize: 'vertical',
+              }}
+            />
+          </section>
+
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 12,
+              background: '#f7f7f7',
+            }}
+          >
+            <strong>YA TA 교관 인증</strong>
+
+            <p
+              style={{
+                marginBottom: 0,
+                marginTop: 6,
+                color: '#666',
+                lineHeight: 1.6,
+              }}
+            >
+              자격증, 차량 정보, 보험 및 교육차량 안전장치 확인 후
+              인증 배지가 부여되는 구조로 발전시킬 예정입니다.
+            </p>
+          </div>
+
+          <button
+            type="submit"
+            className="primaryBtn full"
+            disabled={loading}
+          >
+            {loading ? '등록 중...' : '교관 등록하기'}
+          </button>
+
+          {message && (
+            <p
+              style={{
+                margin: 0,
+                fontWeight: 700,
+              }}
+            >
+              {message}
+            </p>
+          )}
+        </form>
+      </div>
+    </main>
+  )
+}
