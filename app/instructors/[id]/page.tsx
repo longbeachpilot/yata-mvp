@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import {
-  BadgeCheck,
+  UserRound,
   CalendarDays,
   Check,
   MapPin,
-  ShieldCheck,
+  Info,
   Star,
   Car,
   Clock3,
@@ -22,12 +22,10 @@ type Instructor = {
   area: string
   specialties: string[]
   licenses: string[]
-  license_number: string | null
   vehicle: string
   vehicle_year: number | null
   transmission: string | null
   dual_brake: boolean
-  insurance_verified: boolean
   rating: number | string
   reviews: number
   lessons: number
@@ -60,12 +58,10 @@ export default function DetailPage() {
             area,
             specialties,
             licenses,
-            license_number,
             vehicle,
             vehicle_year,
             transmission,
             dual_brake,
-            insurance_verified,
             rating,
             reviews,
             lessons,
@@ -152,9 +148,9 @@ export default function DetailPage() {
             </div>
 
             <div>
-              <span className="verified">
-                <BadgeCheck size={15} />
-                등록 교관
+              <span className="muted">
+                <UserRound size={15} />
+                교관 프로필
               </span>
 
               <h1>{i.name} 교관</h1>
@@ -198,7 +194,7 @@ export default function DetailPage() {
           </div>
 
           <div className="contentCard">
-            <h3>자격 및 교육 가능 종별</h3>
+            <h3>교관 등록 종별</h3>
 
             <div className="checkList">
               {i.licenses?.map((item) => (
@@ -209,27 +205,9 @@ export default function DetailPage() {
               ))}
             </div>
 
-            {i.license_number && (
-              <div
-                style={{
-                  marginTop: 18,
-                  paddingTop: 16,
-                  borderTop: '1px solid #eee',
-                }}
-              >
-                <strong>자격증 번호</strong>
-
-                <p
-                  style={{
-                    marginBottom: 0,
-                    marginTop: 6,
-                    color: '#666',
-                  }}
-                >
-                  {i.license_number}
-                </p>
-              </div>
-            )}
+            <p className="muted" style={{ marginTop: 16 }}>
+              교관이 입력한 종별 정보이며, 운영자 검증 전입니다.
+            </p>
           </div>
 
           <div className="contentCard">
@@ -256,7 +234,7 @@ export default function DetailPage() {
 
                 <small>
                   <Car size={14} />
-                  교육용 등록 차량
+                  교관이 등록한 차량
                 </small>
               </div>
             </div>
@@ -274,9 +252,7 @@ export default function DetailPage() {
                 style={{
                   padding: 14,
                   borderRadius: 12,
-                  background: i.dual_brake
-                    ? '#eef8f1'
-                    : '#f7f7f7',
+                  background: '#f7f7f7',
                 }}
               >
                 <strong>
@@ -290,8 +266,8 @@ export default function DetailPage() {
                   }}
                 >
                   {i.dual_brake
-                    ? '장착 확인'
-                    : '미확인'}
+                    ? '장착으로 입력됨 · 운영자 검증 전'
+                    : '장착 여부 미확인'}
                 </p>
               </div>
 
@@ -299,10 +275,7 @@ export default function DetailPage() {
                 style={{
                   padding: 14,
                   borderRadius: 12,
-                  background:
-                    i.insurance_verified
-                      ? '#eef8f1'
-                      : '#f7f7f7',
+                  background: '#f7f7f7',
                 }}
               >
                 <strong>
@@ -315,9 +288,7 @@ export default function DetailPage() {
                     marginTop: 6,
                   }}
                 >
-                  {i.insurance_verified
-                    ? '확인 완료'
-                    : '미확인'}
+                  운영자 검증 전
                 </p>
               </div>
             </div>
@@ -337,11 +308,11 @@ export default function DetailPage() {
                   alignItems: 'center',
                 }}
               >
-                <ShieldCheck size={15} />
+                <Info size={15} />
 
-                자격·보험·교육차량 정보는 향후
-                운영자 검증 절차를 거쳐 인증
-                배지로 표시할 예정입니다.
+                자격·차량 정보는 교관이 입력한 내용입니다.
+                자격·보조브레이크·보험에 대한 운영자 검증은
+                아직 완료되지 않았습니다.
               </small>
             </div>
           </div>

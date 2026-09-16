@@ -16,9 +16,11 @@ type Booking = {
   amount: number
   status: 'requested' | 'confirmed' | 'completed' | 'cancelled'
   instructor: {
+    id: string
     name: string
     vehicle: string
   } | null
+  reviews: { id: string }[]
 }
 
 const statusLabel: Record<Booking['status'], string> = {
@@ -36,6 +38,10 @@ function BookingsContent() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [workingId, setWorkingId] = useState<string | null>(null)
+  const [reviewing, setReviewing] = useState<Booking | null>(null)
+  const [rating, setRating] = useState(5)
+  const [reviewText, setReviewText] = useState('')
 
   useEffect(() => {
     async function loadBookings() {
@@ -96,7 +102,8 @@ function BookingsContent() {
           pickup_text,
           amount,
           status,
-          instructor:instructors(name, vehicle)
+          instructor:instructors(id, name, vehicle),
+          reviews(id)
         `)
         .eq('learner_id', user.id)
         .order('lesson_date', { ascending: true })
@@ -113,6 +120,39 @@ function BookingsContent() {
 
     loadBookings()
   }, [router])
+
+  async function cancelBooking(id: string) {
+    if (!window.confirm('이 예약을 취소하시겠습니까?')) return
+    setWorkingId(id)
+    const { error } = await supabase.rpc('cancel_my_booking', { target_booking_id: id })
+    if (error) setError(error.message)
+    else setBookings(items => items.map(item => item.id === id ? { ...item, status: 'cancelled' } : item))
+    setWorkingId(null)
+  }
+
+  async function submitReview() {
+    if (!reviewing?.instructor || reviewText.trim().length < 10) {
+      setError('후기는 10자 이상 입력해주세요.')
+      return
+    }
+    setWorkingId(reviewing.id)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push('/login'); return }
+    const { error } = await supabase.from('reviews').insert({
+      booking_id: reviewing.id,
+      learner_id: user.id,
+      instructor_id: reviewing.instructor.id,
+      rating,
+      content: reviewText.trim(),
+    })
+    if (error) setError(error.message)
+    else {
+      setBookings(items => items.map(item => item.id === reviewing.id ? { ...item, reviews: [{ id: 'new' }] } : item))
+      setReviewing(null)
+      setReviewText('')
+    }
+    setWorkingId(null)
+  }
 
   const getStatusStyle = (status: Booking['status']) => {
     if (status === 'confirmed') {
@@ -284,9 +324,40 @@ function BookingsContent() {
                 >
                   {statusLabel[booking.status]}
                 </span>
+                <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                  {(booking.status === 'requested' || booking.status === 'confirmed') && (
+                    <button disabled={workingId === booking.id} onClick={() => cancelBooking(booking.id)}>
+                      {workingId === booking.id ? '처리 중' : '예약 취소'}
+                    </button>
+                  )}
+                  {booking.status === 'completed' && booking.reviews.length === 0 && (
+                    <button onClick={() => setReviewing(booking)}>후기 작성</button>
+                  )}
+                  {booking.reviews.length > 0 && <small>후기 작성 완료</small>}
+                </div>
               </div>
             )
           })}
+        </div>
+      )}
+
+      {reviewing && (
+        <div className="modalBackdrop" role="presentation" onClick={() => setReviewing(null)}>
+          <section className="reviewModal" role="dialog" aria-modal="true" aria-labelledby="review-title" onClick={e => e.stopPropagation()}>
+            <h2 id="review-title">수업 후기</h2>
+            <label>평점
+              <select value={rating} onChange={e => setRating(Number(e.target.value))}>
+                {[5,4,3,2,1].map(v => <option key={v} value={v}>{'★'.repeat(v)} ({v}점)</option>)}
+              </select>
+            </label>
+            <label>후기
+              <textarea value={reviewText} maxLength={1000} onChange={e => setReviewText(e.target.value)} placeholder="수업에서 좋았던 점을 10자 이상 적어주세요." />
+            </label>
+            <div style={{display:'flex',justifyContent:'flex-end',gap:8}}>
+              <button onClick={() => setReviewing(null)}>닫기</button>
+              <button className="primaryBtn" disabled={workingId === reviewing.id} onClick={submitReview}>후기 등록</button>
+            </div>
+          </section>
         </div>
       )}
     </main>

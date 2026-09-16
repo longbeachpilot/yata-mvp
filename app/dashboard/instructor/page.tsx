@@ -168,14 +168,10 @@ export default function InstructorDashboard() {
     try {
       setUpdatingId(bookingId)
 
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status })
-        .eq('id', bookingId)
-        .eq(
-          'instructor_id',
-          instructor.id
-        )
+      const { error } = await supabase.rpc('instructor_transition_booking', {
+        target_booking_id: bookingId,
+        next_status: status,
+      })
 
       if (error) {
         alert(

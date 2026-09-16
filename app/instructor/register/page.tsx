@@ -156,7 +156,8 @@ export default function InstructorRegisterPage() {
         lessons: 0,
 
         next_slot: null,
-        active: true,
+        active: false,
+        approval_status: 'pending',
       })
 
     if (insertError) {
@@ -165,10 +166,7 @@ export default function InstructorRegisterPage() {
       return
     }
 
-    await supabase
-      .from('profiles')
-      .update({ role: 'instructor' })
-      .eq('id', user.id)
+    await supabase.rpc('become_instructor')
 
     setMessage('교관 등록이 완료되었습니다.')
 

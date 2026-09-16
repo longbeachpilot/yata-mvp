@@ -29,7 +29,7 @@ export default function InstructorsPage() {
     async function loadInstructors() {
       const { data, error } = await supabase
         .from('instructors')
-        .select('*')
+        .select('id,name,area,specialties,licenses,vehicle,rating,reviews,lessons,next_slot,intro,active')
         .eq('active', true)
         .order('rating', { ascending: false })
 

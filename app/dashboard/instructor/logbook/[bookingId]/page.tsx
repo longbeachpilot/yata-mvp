@@ -8,12 +8,11 @@ type Booking = {
   id: string
   learner_id: string
   instructor_id: string
-  purpose: string
-  booking_date: string
+  lesson_type: string
+  lesson_date: string
   start_time: string
   duration_minutes: number
   pickup_text: string
-  vehicle_name: string | null
   amount: number
   status: string
 }
@@ -166,90 +165,46 @@ export default function InstructorLogbookPage() {
     setMessage('')
 
     try {
-      const { data: existingLog, error: existingError } =
-        await supabase
-          .from('lesson_logs')
-          .select('id')
-          .eq('booking_id', booking.id)
-          .maybeSingle()
-
-      if (existingError) {
-        setMessage(
-          `기존 Logbook 확인 실패: ${existingError.message}`
-        )
-        return
-      }
-
-      if (existingLog) {
-        setMessage('이미 이 수업의 Logbook이 작성되어 있습니다.')
-        return
-      }
-
-      const {
-        data: logData,
-        error: logError,
-      } = await supabase
-        .from('lesson_logs')
-        .insert({
-          booking_id: booking.id,
-          learner_id: booking.learner_id,
-          instructor_id: booking.instructor_id,
-          minutes,
-          instructor_note: note.trim(),
-          next_goal: nextGoal.trim() || null,
-        })
-        .select('id')
-        .single()
-
-      if (logError) {
-        setMessage(
-          `Logbook 저장 실패: ${logError.message}`
-        )
-        return
-      }
-
       const skillRows = [
         {
-          lesson_log_id: logData.id,
           skill_key: 'basic_control',
           score: skills.basicControl,
           note: null,
         },
         {
-          lesson_log_id: logData.id,
           skill_key: 'lane_keeping',
           score: skills.laneKeeping,
           note: null,
         },
         {
-          lesson_log_id: logData.id,
           skill_key: 'lane_change',
           score: skills.laneChange,
           note: null,
         },
         {
-          lesson_log_id: logData.id,
           skill_key: 'parking',
           score: skills.parking,
           note: null,
         },
         {
-          lesson_log_id: logData.id,
           skill_key: 'highway',
           score: skills.highway,
           note: null,
         },
         {
-          lesson_log_id: logData.id,
           skill_key: 'night_driving',
           score: skills.nightDriving,
           note: null,
         },
       ]
 
-      const { error: skillError } = await supabase
-        .from('skill_progress')
-        .insert(skillRows)
+      const { error: skillError } = await supabase.rpc('create_lesson_log', {
+        target_booking_id: booking.id,
+        lesson_minutes: minutes,
+        note_text: note.trim(),
+        next_goal_text: nextGoal.trim(),
+        skills: skillRows,
+      })
 
       if (skillError) {
         setMessage(
@@ -355,15 +310,15 @@ export default function InstructorLogbookPage() {
             marginBottom: 18,
           }}
         >
-          <h3>{booking.purpose}</h3>
+          <h3>{booking.lesson_type}</h3>
 
           <p>
-            {booking.booking_date} · {booking.start_time}
+            {booking.lesson_date} · {booking.start_time}
           </p>
 
           <p>
             {booking.pickup_text} ·{' '}
-            {booking.vehicle_name || instructor.vehicle}
+            {instructor.vehicle}
           </p>
 
           <p>

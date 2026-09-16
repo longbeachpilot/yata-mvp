@@ -16,6 +16,7 @@ export default function Signup() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [agreed, setAgreed] = useState(false)
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
@@ -23,6 +24,10 @@ export default function Signup() {
 
     if (!role) {
       setMessage('소비자 또는 교관 중 하나를 선택해주세요.')
+      return
+    }
+    if (!agreed) {
+      setMessage('이용약관과 개인정보처리방침에 동의해주세요.')
       return
     }
 
@@ -241,6 +246,11 @@ export default function Signup() {
               />
             </label>
 
+            <label style={{display:'flex',alignItems:'flex-start',gap:10,fontWeight:500}}>
+              <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} required style={{width:18,marginTop:2}} />
+              <span><Link href="/terms" target="_blank">이용약관</Link> 및 <Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의합니다.</span>
+            </label>
+
             <label>
               이메일
 
@@ -273,12 +283,12 @@ export default function Signup() {
             <button
               type="submit"
               className="primaryBtn full"
-              disabled={loading || !role}
+              disabled={loading || !role || !agreed}
               style={{
                 opacity:
-                  loading || !role ? 0.55 : 1,
+                  loading || !role || !agreed ? 0.55 : 1,
                 cursor:
-                  loading || !role
+                  loading || !role || !agreed
                     ? 'not-allowed'
                     : 'pointer',
               }}

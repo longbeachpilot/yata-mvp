@@ -35,7 +35,10 @@ export function Header() {
     }
 
     syncUser()
-    const { data: authListener } = supabase.auth.onAuthStateChange(() => syncUser())
+    // Release the Auth callback before making another Auth request.
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      setTimeout(() => { if (mounted) void syncUser() }, 0)
+    })
 
     return () => {
       mounted = false
