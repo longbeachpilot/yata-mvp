@@ -31,7 +31,7 @@ function LoginContent() {
       const { data: instructor } = await supabase.from('instructors').select('id').eq('user_id', data.user.id).maybeSingle()
       router.push(instructor ? '/dashboard/instructor' : '/instructor/register')
     } else {
-      router.push(next ?? '/instructors')
+      router.push(next ?? '/map')
     }
     router.refresh()
     setLoading(false)
