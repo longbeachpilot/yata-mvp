@@ -41,7 +41,7 @@ function SignupContent() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName.trim(), role } },
+      options: { data: { display_name: displayName.trim(), role, ...(role === 'learner' && next ? { post_auth_next: next } : {}) } },
     })
 
     if (error) {
@@ -57,7 +57,9 @@ function SignupContent() {
       setMessage(
         role === 'instructor'
           ? '교관 계정 회원가입이 완료되었습니다. 이메일 인증 후 로그인하면 교관 등록으로 이동합니다.'
-          : '소비자 계정 회원가입이 완료되었습니다. 이메일 인증 후 로그인해주세요.',
+          : next
+            ? '소비자 계정 회원가입이 완료되었습니다. 이메일 인증 후 이 화면의 로그인 버튼으로 돌아오면 선택한 예약 내용을 이어갈 수 있습니다.'
+            : '소비자 계정 회원가입이 완료되었습니다. 이메일 인증 후 로그인해주세요.',
       )
     }
     setLoading(false)
