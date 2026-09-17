@@ -147,17 +147,8 @@ export default function InstructorRegisterPage() {
         transmission,
 
         dual_brake: dualBrake,
-        insurance_verified: false,
 
         intro: intro.trim() || null,
-
-        rating: 0,
-        reviews: 0,
-        lessons: 0,
-
-        next_slot: null,
-        active: false,
-        approval_status: 'pending',
       })
 
     if (insertError) {
