@@ -41,7 +41,7 @@ function SignupContent() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName.trim(), role, ...(role === 'learner' && next ? { post_auth_next: next } : {}) } },
+      options: { data: { display_name: displayName.trim(), role, ...(role === 'learner' && next ? { post_auth_next: next } : {}) }, emailRedirectTo: `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ''}` },
     })
 
     if (error) {
