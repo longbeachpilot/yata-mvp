@@ -85,9 +85,7 @@ export default function InstructorLogbookPage() {
           .maybeSingle()
 
         if (instructorError) {
-          setError(
-            `교관 정보를 불러오지 못했습니다: ${instructorError.message}`
-          )
+          setError('교관 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.')
           return
         }
 
@@ -109,9 +107,7 @@ export default function InstructorLogbookPage() {
           .maybeSingle()
 
         if (bookingError) {
-          setError(
-            `예약 정보를 불러오지 못했습니다: ${bookingError.message}`
-          )
+          setError('예약 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.')
           return
         }
 
@@ -207,9 +203,7 @@ export default function InstructorLogbookPage() {
       })
 
       if (skillError) {
-        setMessage(
-          `숙련도 저장 실패: ${skillError.message}`
-        )
+        setMessage((skillError.message || '').includes('이미 이 수업의 Logbook') ? '이미 이 수업의 Logbook이 저장되어 있습니다.' : 'Logbook을 저장하지 못했습니다. 입력 내용을 확인한 뒤 다시 시도해주세요.')
         return
       }
 
@@ -242,6 +236,7 @@ export default function InstructorLogbookPage() {
         <div className="panel">
           <strong>Logbook 오류</strong>
           <p>{error}</p>
+          <button type="button" onClick={() => router.push('/dashboard/instructor')}>대시보드로 돌아가기</button>
         </div>
       </main>
     )
