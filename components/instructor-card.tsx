@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { UserRound, Car, MapPin, Star } from 'lucide-react'
+import { ArrowRight, CalendarClock, Car, MapPin, ShieldCheck, Star } from 'lucide-react'
 
 type InstructorCardData = {
   id: string
@@ -16,14 +16,21 @@ type InstructorCardData = {
 
 export function InstructorCard({ instructor }: { instructor: InstructorCardData }) {
   return (
-    <Link href={`/instructors/${instructor.id}`} className="instructorCard">
+    <Link href={`/instructors/${instructor.id}`} className="instructorCard marketplaceCard">
       <div className="avatar">{instructor.name?.charAt(0) || '야'}</div>
       <div className="cardGrow">
-        <div className="nameRow"><strong>{instructor.name} 교관</strong><span className="muted"><UserRound size={14}/> 교관 프로필</span></div>
-        <div className="rating"><Star size={15} fill="currentColor" /> {Number(instructor.rating).toFixed(2)} <span>({instructor.reviews}) · 교육 {instructor.lessons.toLocaleString()}회</span></div>
-        <div className="muted"><MapPin size={14}/> {instructor.area}</div>
+        <div className="nameRow">
+          <div><strong>{instructor.name} 교관</strong><span className="verifiedLabel"><ShieldCheck size={14}/> 승인 교관</span></div>
+          <span className="cardArrow">프로필 보기 <ArrowRight size={15}/></span>
+        </div>
+        <div className="rating"><Star size={15} fill="currentColor"/> {Number(instructor.rating).toFixed(2)} <span>후기 {instructor.reviews} · 교육 {instructor.lessons.toLocaleString()}회</span></div>
+        <div className="marketFacts">
+          <span><MapPin size={14}/> {instructor.area}</span>
+          <span><Car size={14}/> {instructor.vehicle}</span>
+          {instructor.next_slot && <span><CalendarClock size={14}/> 다음 가능 {instructor.next_slot}</span>}
+        </div>
         <div className="chips">{instructor.specialties?.map((item) => <span key={item}>{item}</span>)}</div>
-        <div className="vehicleLine"><span><Car size={14}/> {instructor.vehicle}</span><small>{instructor.licenses?.join(' · ')}</small></div>
+        {instructor.licenses?.length > 0 && <div className="credentialLine">자격 · {instructor.licenses.join(' · ')}</div>}
       </div>
     </Link>
   )

@@ -1,4 +1,5 @@
 import './globals.css'
+import './marketplace.css'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { BottomNav, Header } from '@/components/navigation'
