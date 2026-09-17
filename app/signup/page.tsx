@@ -51,7 +51,7 @@ function SignupContent() {
     }
 
     if (data.session) {
-      router.push(role === 'instructor' ? '/instructor/register' : (next ?? '/instructors'))
+      router.push(role === 'instructor' ? '/instructor/register' : (next ?? '/map'))
       router.refresh()
     } else {
       setMessage(
