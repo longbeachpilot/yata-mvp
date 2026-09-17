@@ -15,7 +15,7 @@ export default function InstructorRegisterPage() {
   const [vehicleYear, setVehicleYear] = useState('')
   const [transmission, setTransmission] = useState('자동')
   const [dualBrake, setDualBrake] = useState(false)
-  const [insuranceVerified, setInsuranceVerified] = useState(false)
+  
 
   const [intro, setIntro] = useState('')
   const [specialties, setSpecialties] = useState<string[]>([])
@@ -147,7 +147,7 @@ export default function InstructorRegisterPage() {
         transmission,
 
         dual_brake: dualBrake,
-        insurance_verified: insuranceVerified,
+        insurance_verified: false,
 
         intro: intro.trim() || null,
 
@@ -223,211 +223,6 @@ export default function InstructorRegisterPage() {
                 marginTop: 16,
               }}
             >
-              <label>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>
-                  교관 이름
-                </div>
-
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="예: 김민수"
-                  style={inputStyle}
-                />
-              </label>
-
-              <label>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>
-                  활동지역
-                </div>
-
-                <input
-                  type="text"
-                  value={area}
-                  onChange={(e) => setArea(e.target.value)}
-                  placeholder="예: 서울 강남·서초"
-                  style={inputStyle}
-                />
-              </label>
-            </div>
-          </section>
-
-          <section>
-            <h3>전문 연수 분야</h3>
-
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 8,
-                marginTop: 14,
-              }}
-            >
-              {specialtyOptions.map((item) => {
-                const selected = specialties.includes(item)
-
-                return (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => toggleSpecialty(item)}
-                    style={{
-                      padding: '9px 13px',
-                      borderRadius: 20,
-                      border: selected
-                        ? '1px solid #ff4b12'
-                        : '1px solid #ddd',
-                      background: selected ? '#fff0e9' : '#fff',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {item}
-                  </button>
-                )
-              })}
-            </div>
-          </section>
-
-          <section>
-            <h3>자격 정보</h3>
-
-            <div style={{ marginTop: 14 }}>
-              <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 8,
-                }}
-              >
-                {licenseOptions.map((item) => {
-                  const selected = licenses.includes(item)
-
-                  return (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => toggleLicense(item)}
-                      style={{
-                        padding: '9px 13px',
-                        borderRadius: 20,
-                        border: selected
-                          ? '1px solid #ff4b12'
-                          : '1px solid #ddd',
-                        background: selected ? '#fff0e9' : '#fff',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {item}
-                    </button>
-                  )
-                })}
-              </div>
-
-              <label style={{ display: 'block', marginTop: 18 }}>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>
-                  자격증 번호
-                </div>
-
-                <input
-                  type="text"
-                  value={licenseNumber}
-                  onChange={(e) => setLicenseNumber(e.target.value)}
-                  placeholder="자격증 또는 관련 등록번호"
-                  style={inputStyle}
-                />
-              </label>
-            </div>
-          </section>
-
-          <section>
-            <h3>교육차량</h3>
-
-            <div
-              style={{
-                display: 'grid',
-                gap: 18,
-                marginTop: 16,
-              }}
-            >
-              <label>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>
-                  차량
-                </div>
-
-                <input
-                  type="text"
-                  value={vehicle}
-                  onChange={(e) => setVehicle(e.target.value)}
-                  placeholder="예: 현대 아반떼 CN7"
-                  style={inputStyle}
-                />
-              </label>
-
-              <label>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>
-                  차량 연식
-                </div>
-
-                <input
-                  type="number"
-                  value={vehicleYear}
-                  onChange={(e) => setVehicleYear(e.target.value)}
-                  placeholder="예: 2025"
-                  min="1990"
-                  max="2030"
-                  style={inputStyle}
-                />
-              </label>
-
-              <label>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>
-                  변속기
-                </div>
-
-                <select
-                  value={transmission}
-                  onChange={(e) => setTransmission(e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="자동">자동</option>
-                  <option value="수동">수동</option>
-                </select>
-              </label>
-
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  cursor: 'pointer',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={dualBrake}
-                  onChange={(e) => setDualBrake(e.target.checked)}
-                />
-                <span>교육용 보조브레이크 장착</span>
-              </label>
-
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  cursor: 'pointer',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={insuranceVerified}
-                  onChange={(e) =>
-                    setInsuranceVerified(e.target.checked)
-                  }
-                />
-                <span>운전연수 관련 보험 확인</span>
-              </label>
             </div>
           </section>
 
@@ -464,8 +259,7 @@ export default function InstructorRegisterPage() {
                 lineHeight: 1.6,
               }}
             >
-              자격증, 차량 정보, 보험 및 교육차량 안전장치 확인 후
-              인증 배지가 부여되는 구조로 발전시킬 예정입니다.
+              등록한 자격·차량·안전장치 정보는 YA TA 확인 전까지 인증 완료로 표시되지 않습니다. 보험 확인은 제출 자료 검토 후 운영자가 반영합니다.
             </p>
           </div>
 
