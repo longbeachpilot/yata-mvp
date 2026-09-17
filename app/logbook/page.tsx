@@ -76,7 +76,7 @@ export default function LogbookPage() {
         .eq('learner_id', user.id)
         .order('created_at', { ascending: false })
 
-      if (loadError) setError(loadError.message)
+      if (loadError) setError('Logbook을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.')
       else setLogs((data ?? []) as unknown as Logbook[])
       setLoading(false)
     }
@@ -114,7 +114,7 @@ export default function LogbookPage() {
   if (error) {
     return (
       <main className="container section">
-        <div className="bookingError">Logbook을 불러오지 못했습니다: {error}</div>
+        <div className="bookingError">{error}<div style={{ marginTop: 12 }}><Link href="/bookings" className="textLink">내 수업으로 돌아가기</Link></div></div>
       </main>
     )
   }
