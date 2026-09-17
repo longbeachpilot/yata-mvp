@@ -20,10 +20,10 @@ export function InstructorCard({ instructor }: { instructor: InstructorCardData 
       <div className="avatar">{instructor.name?.charAt(0) || '야'}</div>
       <div className="cardGrow">
         <div className="nameRow">
-          <div><strong>{instructor.name} 교관</strong><span className="verifiedLabel"><ShieldCheck size={14}/> 승인 교관</span></div>
+          <div><strong>{instructor.name} 교관</strong><span className="verifiedLabel"><ShieldCheck size={14}/> 등록 교관</span></div>
           <span className="cardArrow">프로필 보기 <ArrowRight size={15}/></span>
         </div>
-        <div className="rating"><Star size={15} fill="currentColor"/> {Number(instructor.rating).toFixed(2)} <span>후기 {instructor.reviews} · 교육 {instructor.lessons.toLocaleString()}회</span></div>
+        <div className="rating"><Star size={15} fill="currentColor"/> {instructor.reviews > 0 ? Number(instructor.rating).toFixed(2) : "신규"} <span>{instructor.reviews > 0 ? `후기 ${instructor.reviews} · ` : "후기 없음 · "}교육 {instructor.lessons.toLocaleString()}회</span></div>
         <div className="marketFacts">
           <span><MapPin size={14}/> {instructor.area}</span>
           <span><Car size={14}/> {instructor.vehicle}</span>
