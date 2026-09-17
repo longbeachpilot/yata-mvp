@@ -85,7 +85,7 @@ export default function InstructorsPage() {
 
       <div className="marketMeta">
         <div><strong>{filtered.length}명</strong>의 교관을 찾았습니다</div>
-        <span><ShieldCheck size={15}/> 승인된 교관만 표시</span>
+        <span><ShieldCheck size={15}/> 등록된 교관 정보</span>
       </div>
 
       {filtered.length > 0 ? (
