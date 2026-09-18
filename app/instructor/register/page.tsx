@@ -106,53 +106,22 @@ export default function InstructorRegisterPage() {
       return
     }
 
-    const {
-      data: existingInstructor,
-      error: existingError,
-    } = await supabase
-      .from('instructors')
-      .select('id, name')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (existingError) {
-      setMessage('기존 교관 정보를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.')
-      setLoading(false)
-      return
-    }
-
-    if (existingInstructor) {
-      setMessage(
-        `이미 "${existingInstructor.name}" 교관 프로필이 연결되어 있습니다.`
-      )
-      setLoading(false)
-      return
-    }
-
-    const { error: insertError } = await supabase
-      .from('instructors')
-      .insert({
-        user_id: user.id,
-
-        name: name.trim(),
-        area: area.trim(),
-
-        specialties,
-        licenses,
-
-        license_number: licenseNumber.trim() || null,
-
-        vehicle: vehicle.trim(),
-        vehicle_year: vehicleYear ? Number(vehicleYear) : null,
-        transmission,
-
-        dual_brake: dualBrake,
-
-        intro: intro.trim() || null,
-      })
+    const { error: insertError } = await supabase.rpc('register_instructor', {
+      instructor_name: name.trim(),
+      service_area: area.trim(),
+      instructor_specialties: specialties,
+      instructor_licenses: licenses,
+      private_license_number: licenseNumber.trim() || null,
+      education_vehicle: vehicle.trim(),
+      education_vehicle_year: vehicleYear ? Number(vehicleYear) : null,
+      education_transmission: transmission,
+      has_dual_brake: dualBrake,
+      instructor_intro: intro.trim() || null,
+    })
 
     if (insertError) {
-      setMessage('교관 등록을 완료하지 못했습니다. 입력 내용을 확인한 뒤 다시 시도해주세요.')
+      const code = insertError.message || ''
+      setMessage(code.includes('INSTRUCTOR_EXISTS') ? '이미 교관 프로필이 연결된 계정입니다.' : '교관 등록을 완료하지 못했습니다. 입력 내용을 확인한 뒤 다시 시도해주세요.')
       setLoading(false)
       return
     }
