@@ -1,0 +1,14 @@
+'use client'
+import {useEffect,useState} from 'react'
+import {useRouter} from 'next/navigation'
+import {supabase} from '@/lib/supabase'
+type Instructor={id:string;name:string;area:string;vehicle:string;licenses:string[];specialties:string[];dual_brake:boolean;insurance_verified:boolean;active:boolean;created_at:string}
+export default function AdminInstructorsPage(){
+ const router=useRouter();const[items,setItems]=useState<Instructor[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[busy,setBusy]=useState<string|null>(null)
+ async function load(){setLoading(true);setError('');const{data:{user}}=await supabase.auth.getUser();if(!user){router.replace('/login?next=%2Fadmin%2Finstructors');return}
+ const{data,error}=await supabase.rpc('admin_list_instructors');if(error){setError('관리자 권한이 필요하거나 목록을 불러오지 못했습니다.');setLoading(false);return}setItems((data??[]) as Instructor[]);setLoading(false)}
+ useEffect(()=>{load()},[])
+ async function review(i:Instructor,insurance:boolean,publish:boolean){setBusy(i.id);setError('');const{error}=await supabase.rpc('admin_review_instructor',{target_instructor_id:i.id,verified_insurance:insurance,publish});if(error)setError(error.message.includes('ADMIN_REQUIRED')?'관리자 권한이 필요합니다.':'상태를 변경하지 못했습니다.');else await load();setBusy(null)}
+ if(loading)return <main className="container section pageTop"><div className="panel">교관 심사 목록을 불러오는 중...</div></main>
+ return <main className="container section pageTop"><div className="pageTitle"><span>YA TA ADMIN</span><h1>교관 승인 관리</h1><p>등록 정보와 제출 자료를 별도로 확인한 뒤 보험 확인 및 공개 여부를 결정하세요.</p></div>{error&&<p className="bookingError">{error}</p>}<div style={{display:'grid',gap:16,marginTop:24}}>{items.length===0?<div className="panel">등록된 교관이 없습니다.</div>:items.map(i=>{const ready=i.insurance_verified&&i.dual_brake&&i.licenses.length>0;return <section className="panel" key={i.id}><div className="panelHead"><div><h3>{i.name}</h3><p>{i.area} · {i.vehicle}</p></div><strong>{i.active?'공개 중':ready?'공개 가능':'검토 필요'}</strong></div><p>자격 등록: {i.licenses.length?i.licenses.join(', '):'없음'}<br/>전문 분야: {i.specialties.length?i.specialties.join(', '):'없음'}<br/>보조브레이크 등록: {i.dual_brake?'예':'아니오'}<br/>보험 운영 확인: {i.insurance_verified?'완료':'미확인'}</p><div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button disabled={busy===i.id} onClick={()=>review(i,true,false)}>보험 확인 완료</button><button disabled={busy===i.id||!ready} className="primaryBtn" onClick={()=>review(i,true,true)}>확인 후 공개</button><button disabled={busy===i.id} onClick={()=>review(i,false,false)}>보류·비공개</button></div></section>})}</div></main>
+}

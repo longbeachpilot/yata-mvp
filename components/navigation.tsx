@@ -57,7 +57,7 @@ export function Header() {
         <Link className="brand" href="/"><span>야</span> 타</Link>
 
         <nav className="desktopNav">
-          <Link href="/instructors">교관 찾기</Link>
+          <Link href="/map">교관 찾기</Link>
           {loggedIn && <Link href="/bookings">내 예약</Link>}
           {loggedIn && <Link href="/logbook">Logbook</Link>}
           {role === 'instructor' && <Link href="/dashboard/instructor">교관센터</Link>}
@@ -102,13 +102,13 @@ export function BottomNav() {
   return (
     <nav className="bottomNav">
       <Link href="/"><Home size={19}/><span>홈</span></Link>
-      <Link href="/instructors"><Search size={19}/><span>교관찾기</span></Link>
+      <Link href="/map"><Search size={19}/><span>교관찾기</span></Link>
       {role === 'instructor' ? (
         <Link href="/dashboard/instructor"><Gauge size={19}/><span>교관센터</span></Link>
       ) : (
-        <Link href="/bookings"><BookOpen size={19}/><span>예약</span></Link>
+        <Link href={loggedIn ? "/bookings" : "/login?next=%2Fbookings"}><BookOpen size={19}/><span>예약</span></Link>
       )}
-      <Link href="/logbook"><BookOpen size={19}/><span>기록</span></Link>
+      <Link href={loggedIn ? "/logbook" : "/login?next=%2Flogbook"}><BookOpen size={19}/><span>기록</span></Link>
       <Link href={loggedIn ? (role === 'instructor' ? '/dashboard/instructor/profile' : '/profile') : '/login'}>
         <UserRound size={19}/><span>MY</span>
       </Link>

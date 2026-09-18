@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { BookOpen, RotateCcw } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 type Skill = {
@@ -19,19 +21,13 @@ type Logbook = {
   instructor_note: string
   next_goal: string | null
   created_at: string
-
-  instructor: {
-    name: string
-    vehicle: string
-  } | null
-
+  instructor: { id: string; name: string; vehicle: string } | null
   booking: {
     lesson_type: string
     lesson_date: string
     start_time: string
     pickup_text: string
   } | null
-
   skills: Skill[]
 }
 
@@ -46,162 +42,71 @@ const skillLabel: Record<string, string> = {
 
 export default function LogbookPage() {
   const router = useRouter()
-
   const [logs, setLogs] = useState<Logbook[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    async function loadLogbook() {
-      try {
-        setLoading(true)
-        setError('')
+    async function load() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser()
-
-        if (userError || !user) {
-          router.replace('/login')
-          return
-        }
-
-        const {
-          data: profile,
-          error: profileError,
-        } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .maybeSingle()
-
-        if (profileError) {
-          setError(
-            `사용자 권한을 확인하지 못했습니다: ${profileError.message}`
-          )
-          return
-        }
-
-        if (!profile) {
-          setError('사용자 프로필을 찾을 수 없습니다.')
-          return
-        }
-
-        if (profile.role === 'instructor') {
-          router.replace('/dashboard/instructor')
-          return
-        }
-
-        if (profile.role !== 'learner') {
-          router.replace('/')
-          return
-        }
-
-        const { data, error } = await supabase
-          .from('lesson_logs')
-          .select(`
-            id,
-            booking_id,
-            learner_id,
-            instructor_id,
-            minutes,
-            instructor_note,
-            next_goal,
-            created_at,
-
-            instructor:instructors(
-              name,
-              vehicle
-            ),
-
-            booking:bookings(
-              lesson_type,
-              lesson_date,
-              start_time,
-              pickup_text
-            ),
-
-            skills:skill_progress(
-              skill_key,
-              score,
-              note
-            )
-          `)
-          .eq('learner_id', user.id)
-          .order('created_at', {
-            ascending: false,
-          })
-
-        if (error) {
-          setError(
-            `Logbook을 불러오지 못했습니다: ${error.message}`
-          )
-          return
-        }
-
-        setLogs(
-          (data ?? []) as unknown as Logbook[]
-        )
-      } catch (err) {
-        console.error(err)
-
-        setError(
-          'Logbook을 불러오는 중 오류가 발생했습니다.'
-        )
-      } finally {
-        setLoading(false)
+      if (!user) {
+        router.replace('/login?next=%2Flogbook')
+        return
       }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (profile?.role === 'instructor') {
+        router.replace('/dashboard/instructor')
+        return
+      }
+
+      const { data, error: loadError } = await supabase
+        .from('lesson_logs')
+        .select(
+          'id,booking_id,learner_id,instructor_id,minutes,instructor_note,next_goal,created_at,instructor:instructors(id,name,vehicle),booking:bookings(lesson_type,lesson_date,start_time,pickup_text),skills:skill_progress(skill_key,score,note)',
+        )
+        .eq('learner_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (loadError) setError('Logbook을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.')
+      else setLogs((data ?? []) as unknown as Logbook[])
+      setLoading(false)
     }
 
-    loadLogbook()
+    load()
   }, [router])
 
-  const totalMinutes = logs.reduce(
-    (sum, log) =>
-      sum + Number(log.minutes || 0),
-    0
+  const totalMinutes = useMemo(
+    () => logs.reduce((sum, log) => sum + Number(log.minutes || 0), 0),
+    [logs],
   )
 
-  const totalHours = totalMinutes / 60
-
-  function getAverageSkill(
-    skillKey: string
-  ) {
+  function averageSkill(skillKey: string) {
     const values = logs
-      .flatMap(
-        (log) => log.skills || []
-      )
-      .filter(
-        (skill) =>
-          skill.skill_key === skillKey
-      )
-      .map(
-        (skill) =>
-          Number(skill.score)
-      )
+      .flatMap((log) => log.skills || [])
+      .filter((skill) => skill.skill_key === skillKey)
+      .map((skill) => Number(skill.score))
 
-    if (values.length === 0) {
-      return null
-    }
-
-    const total = values.reduce(
-      (sum, score) =>
-        sum + score,
-      0
-    )
-
-    return Math.round(
-      total / values.length
-    )
+    return values.length
+      ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+      : null
   }
+
+  const parkingAverage = averageSkill('parking')
+  const laneChangeAverage = averageSkill('lane_change')
 
   if (loading) {
     return (
       <main className="container section">
-        <div className="panel">
-          사용자 권한을 확인하는 중...
-        </div>
+        <div className="panel">Logbook을 불러오는 중...</div>
       </main>
     )
   }
@@ -209,13 +114,7 @@ export default function LogbookPage() {
   if (error) {
     return (
       <main className="container section">
-        <div className="panel">
-          <strong>
-            Logbook 오류
-          </strong>
-
-          <p>{error}</p>
-        </div>
+        <div className="bookingError">{error}<div style={{ marginTop: 12 }}><Link href="/bookings" className="textLink">내 수업으로 돌아가기</Link></div></div>
       </main>
     )
   }
@@ -224,345 +123,129 @@ export default function LogbookPage() {
     <main className="container section">
       <div className="pageHead">
         <div>
-          <span>
-            YA TA LOGBOOK
-          </span>
-
-          <h1>
-            내 연수 기록
-          </h1>
+          <span>YA TA LOGBOOK</span>
+          <h1>내 연수 기록</h1>
+          <p>완료한 수업과 다음 연습 목표를 이어서 관리합니다.</p>
         </div>
+        <Link href="/map" className="primaryBtn">
+          다음 수업 찾기
+        </Link>
       </div>
 
       <div className="dashStats">
         <div>
           <span>누적 연수</span>
-
-          <b>
-            {Number.isInteger(totalHours)
-              ? `${totalHours}h`
-              : `${totalHours.toFixed(1)}h`}
-          </b>
-
-          <small>
-            실제 완료 수업 기준
-          </small>
+          <b>{(totalMinutes / 60).toFixed(totalMinutes % 60 ? 1 : 0)}h</b>
+          <small>Logbook 기준</small>
         </div>
-
         <div>
-          <span>완료 수업</span>
-
-          <b>
-            {logs.length}
-          </b>
-
-          <small>
-            Logbook 작성 완료
-          </small>
+          <span>완료 기록</span>
+          <b>{logs.length}</b>
+          <small>작성된 수업</small>
         </div>
-
         <div>
-          <span>
-            주차 숙련도
-          </span>
-
-          <b>
-            {getAverageSkill(
-              'parking'
-            ) !== null
-              ? `${getAverageSkill(
-                  'parking'
-                )}%`
-              : '-'}
-          </b>
-
-          <small>
-            최근 기록 평균
-          </small>
+          <span>주차</span>
+          <b>{parkingAverage === null ? '-' : `${parkingAverage}%`}</b>
+          <small>기록 평균</small>
         </div>
-
         <div>
-          <span>
-            차선 변경
-          </span>
-
-          <b>
-            {getAverageSkill(
-              'lane_change'
-            ) !== null
-              ? `${getAverageSkill(
-                  'lane_change'
-                )}%`
-              : '-'}
-          </b>
-
-          <small>
-            최근 기록 평균
-          </small>
+          <span>차선 변경</span>
+          <b>{laneChangeAverage === null ? '-' : `${laneChangeAverage}%`}</b>
+          <small>기록 평균</small>
         </div>
       </div>
 
-      {logs.length === 0 && (
-        <section
-          className="panel"
-          style={{
-            marginTop: 24,
-            textAlign: 'center',
-            padding: 40,
-          }}
-        >
-          <h3>
-            아직 연수 기록이 없습니다.
-          </h3>
-
-          <p
-            style={{
-              color: '#777',
-            }}
-          >
-            수업이 완료되고 교관이
-            Logbook을 작성하면 이곳에
-            기록이 쌓입니다.
-          </p>
+      {logs.length === 0 ? (
+        <section className="panel" style={{ marginTop: 24, textAlign: 'center', padding: 40 }}>
+          <BookOpen size={34} />
+          <h3>아직 연수 기록이 없습니다.</h3>
+          <p>수업 완료 후 교관이 Logbook을 작성하면 이곳에 기록됩니다.</p>
+          <Link href="/map" className="primaryBtn">
+            첫 수업 찾기
+          </Link>
         </section>
-      )}
+      ) : (
+        <div style={{ display: 'grid', gap: 20, marginTop: 24 }}>
+          {logs.map((log) => {
+            const rebookHref = `/book?instructor=${log.instructor_id}${
+              log.booking?.pickup_text
+                ? `&pickup=${encodeURIComponent(log.booking.pickup_text)}`
+                : ''
+            }${
+              log.booking?.lesson_type
+                ? `&purpose=${encodeURIComponent(log.booking.lesson_type)}`
+                : ''
+            }`
 
-      {logs.length > 0 && (
-        <div
-          style={{
-            display: 'grid',
-            gap: 20,
-            marginTop: 24,
-          }}
-        >
-          {logs.map((log) => (
-            <section
-              className="panel"
-              key={log.id}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent:
-                    'space-between',
-                  alignItems:
-                    'flex-start',
-                  gap: 20,
-                  flexWrap: 'wrap',
-                }}
-              >
-                <div>
-                  <span
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: '#777',
-                    }}
-                  >
-                    {log.booking
-                      ?.lesson_date ||
-                      ''}
-                  </span>
+            return (
+              <section className="panel" key={log.id}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 20,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div>
+                    <span>{log.booking?.lesson_date}</span>
+                    <h2>{log.booking?.lesson_type || '운전 연수'}</h2>
+                    <p>
+                      {log.instructor?.name || '교관'} 교관 · {log.minutes / 60}시간 ·{' '}
+                      {log.instructor?.vehicle}
+                    </p>
+                    <p>
+                      {log.booking?.start_time} · {log.booking?.pickup_text}
+                    </p>
+                  </div>
+                  <span className="status">수업 완료</span>
+                </div>
 
-                  <h2
-                    style={{
-                      marginTop: 6,
-                      marginBottom: 6,
-                    }}
-                  >
-                    {log.booking
-                      ?.lesson_type ||
-                      '운전 연수'}
-                  </h2>
-
-                  <p>
-                    {log.instructor
-                      ?.name ||
-                      '교관'}{' '}
-                    교관 ·{' '}
-                    {log.minutes / 60}
-                    시간
-                  </p>
-
-                  {log.booking && (
-                    <p
+                {(log.skills || []).length > 0 && (
+                  <div style={{ marginTop: 20 }}>
+                    <h3>이번 수업 숙련도</h3>
+                    <div
                       style={{
-                        color:
-                          '#777',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))',
+                        gap: 12,
                       }}
                     >
-                      {
-                        log.booking
-                          .start_time
-                      }
-                      {' · '}
-                      {
-                        log.booking
-                          .pickup_text
-                      }
-                      {' · '}
-                      {log
-                        .instructor
-                        ?.vehicle ||
-                        '교육차량'}
-                    </p>
-                  )}
-                </div>
-
-                <div
-                  style={{
-                    padding:
-                      '9px 13px',
-                    borderRadius: 20,
-                    background:
-                      '#e8f7ee',
-                    color:
-                      '#16803a',
-                    fontWeight: 700,
-                  }}
-                >
-                  수업 완료
-                </div>
-              </div>
-
-              <div
-                style={{
-                  marginTop: 22,
-                  paddingTop: 20,
-                  borderTop:
-                    '1px solid #eee',
-                }}
-              >
-                <h3>
-                  숙련도
-                </h3>
-
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns:
-                      'repeat(auto-fit, minmax(180px, 1fr))',
-                    gap: 14,
-                    marginTop: 14,
-                  }}
-                >
-                  {(log.skills ||
-                    []).map(
-                    (skill) => (
-                      <div
-                        key={
-                          skill.skill_key
-                        }
-                        style={{
-                          padding: 14,
-                          borderRadius:
-                            12,
-                          background:
-                            '#f7f7f7',
-                        }}
-                      >
+                      {log.skills.map((skill) => (
                         <div
-                          style={{
-                            display:
-                              'flex',
-                            justifyContent:
-                              'space-between',
-                            gap: 10,
-                          }}
+                          key={skill.skill_key}
+                          style={{ padding: 14, background: '#f7f7f7', borderRadius: 12 }}
                         >
-                          <strong>
-                            {skillLabel[
-                              skill
-                                .skill_key
-                            ] ||
-                              skill.skill_key}
-                          </strong>
-
-                          <b>
-                            {
-                              skill.score
-                            }
-                            %
-                          </b>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <strong>{skillLabel[skill.skill_key] || skill.skill_key}</strong>
+                            <b>{skill.score}%</b>
+                          </div>
+                          <div className="bar" style={{ marginTop: 8 }}>
+                            <i style={{ width: `${skill.score}%` }} />
+                          </div>
+                          {skill.note && <small>{skill.note}</small>}
                         </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                        <div
-                          style={{
-                            height: 7,
-                            background:
-                              '#e5e5e5',
-                            borderRadius:
-                              20,
-                            marginTop: 10,
-                            overflow:
-                              'hidden',
-                          }}
-                        >
-                          <div
-                            style={{
-                              height:
-                                '100%',
-                              width: `${skill.score}%`,
-                              background:
-                                '#ff4b12',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    )
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid #eee' }}>
+                  <h3>교관 코멘트</h3>
+                  <p>{log.instructor_note}</p>
+                  {log.next_goal && (
+                    <div style={{ padding: 16, borderRadius: 12, background: '#fff5ef' }}>
+                      <strong>다음 수업 목표</strong>
+                      <p>{log.next_goal}</p>
+                    </div>
                   )}
+                  <Link href={rebookHref} className="primaryBtn" style={{ marginTop: 14 }}>
+                    <RotateCcw size={16} /> 같은 교관과 이어서 연습
+                  </Link>
                 </div>
-              </div>
-
-              <div
-                style={{
-                  marginTop: 22,
-                  paddingTop: 20,
-                  borderTop:
-                    '1px solid #eee',
-                }}
-              >
-                <h3>
-                  교관 코멘트
-                </h3>
-
-                <p
-                  style={{
-                    lineHeight: 1.7,
-                  }}
-                >
-                  {
-                    log.instructor_note
-                  }
-                </p>
-              </div>
-
-              {log.next_goal && (
-                <div
-                  style={{
-                    marginTop: 18,
-                    padding: 16,
-                    borderRadius: 12,
-                    background:
-                      '#fff5ef',
-                  }}
-                >
-                  <strong>
-                    다음 수업 목표
-                  </strong>
-
-                  <p
-                    style={{
-                      marginBottom: 0,
-                      marginTop: 6,
-                    }}
-                  >
-                    {log.next_goal}
-                  </p>
-                </div>
-              )}
-            </section>
-          ))}
+              </section>
+            )
+          })}
         </div>
       )}
     </main>
