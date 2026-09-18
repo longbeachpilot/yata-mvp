@@ -17,6 +17,14 @@ function CallbackContent() {
   useEffect(() => {
     let active = true
     async function finish() {
+      const code = sp.get('code')
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+        if (exchangeError) {
+          if (active) setError('이메일 인증 정보를 확인하지 못했습니다. 인증 링크를 다시 확인해주세요.')
+          return
+        }
+      }
       const { data, error } = await supabase.auth.getSession()
       if (!active) return
       if (error || !data.session) {
