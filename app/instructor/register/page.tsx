@@ -116,7 +116,7 @@ export default function InstructorRegisterPage() {
       .maybeSingle()
 
     if (existingError) {
-      setMessage(`기존 교관 정보 확인 실패: ${existingError.message}`)
+      setMessage('기존 교관 정보를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.')
       setLoading(false)
       return
     }
@@ -152,7 +152,7 @@ export default function InstructorRegisterPage() {
       })
 
     if (insertError) {
-      setMessage(`교관 등록 실패: ${insertError.message}`)
+      setMessage('교관 등록을 완료하지 못했습니다. 입력 내용을 확인한 뒤 다시 시도해주세요.')
       setLoading(false)
       return
     }
@@ -214,6 +214,15 @@ export default function InstructorRegisterPage() {
                 marginTop: 16,
               }}
             >
+              <label>이름<input value={name} onChange={(e) => setName(e.target.value)} placeholder="교관 이름" style={inputStyle} /></label>
+              <label>활동지역<input value={area} onChange={(e) => setArea(e.target.value)} placeholder="예: 서울 강남구" style={inputStyle} /></label>
+              <label>면허번호<input value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} placeholder="운영자 확인용" style={inputStyle} /></label>
+              <div><strong>자격 / 교육 가능 종별</strong><div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:10}}>{licenseOptions.map((item) => <label key={item}><input type="checkbox" checked={licenses.includes(item)} onChange={() => toggleLicense(item)} /> {item}</label>)}</div></div>
+              <div><strong>전문 연수 분야</strong><div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:10}}>{specialtyOptions.map((item) => <label key={item}><input type="checkbox" checked={specialties.includes(item)} onChange={() => toggleSpecialty(item)} /> {item}</label>)}</div></div>
+              <label>교육차량<input value={vehicle} onChange={(e) => setVehicle(e.target.value)} placeholder="예: 현대 아반떼" style={inputStyle} /></label>
+              <label>차량 연식<input type="number" min="1990" max="2100" value={vehicleYear} onChange={(e) => setVehicleYear(e.target.value)} placeholder="예: 2024" style={inputStyle} /></label>
+              <label>변속기<select value={transmission} onChange={(e) => setTransmission(e.target.value)} style={inputStyle}><option>자동</option><option>수동</option></select></label>
+              <label><input type="checkbox" checked={dualBrake} onChange={(e) => setDualBrake(e.target.checked)} /> 보조브레이크 장착 차량입니다.</label>
             </div>
           </section>
 
