@@ -7,44 +7,41 @@ import { supabase } from '@/lib/supabase'
 
 type Role = 'learner' | 'instructor' | 'admin' | null
 
-export function Header() {
+function useAccount() {
   const [role, setRole] = useState<Role>(null)
   const [loggedIn, setLoggedIn] = useState(false)
-
+  const [isAdmin, setIsAdmin] = useState(false)
   useEffect(() => {
     let mounted = true
-
+    let generation = 0
     async function syncUser() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!mounted) return
-
-      if (!user) {
-        setLoggedIn(false)
-        setRole(null)
-        return
+      const request = ++generation
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!mounted || request !== generation) return
+        if (!user) { setLoggedIn(false); setRole(null); setIsAdmin(false); return }
+        const [{ data }, { data: admin }] = await Promise.all([
+          supabase.from('profiles').select('role').eq('id', user.id).maybeSingle(),
+          supabase.rpc('is_admin'),
+        ])
+        if (mounted && request === generation) {
+          setLoggedIn(true); setRole((data?.role as Role) ?? 'learner'); setIsAdmin(admin === true)
+        }
+      } catch {
+        if (mounted && request === generation) { setLoggedIn(false); setRole(null); setIsAdmin(false) }
       }
-
-      setLoggedIn(true)
-      const { data } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle()
-
-      if (mounted) setRole((data?.role as Role) ?? 'learner')
     }
-
-    syncUser()
-    // Release the Auth callback before making another Auth request.
-    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+    void syncUser()
+    const { data: listener } = supabase.auth.onAuthStateChange(() => {
       setTimeout(() => { if (mounted) void syncUser() }, 0)
     })
-
-    return () => {
-      mounted = false
-      authListener.subscription.unsubscribe()
-    }
+    return () => { mounted = false; listener.subscription.unsubscribe() }
   }, [])
+  return { role, loggedIn, isAdmin }
+}
+
+export function Header() {
+  const { role, loggedIn, isAdmin } = useAccount()
 
   async function logout() {
     await supabase.auth.signOut()
@@ -56,7 +53,8 @@ export function Header() {
       <div className="container headerInner">
         <Link className="brand" href="/"><span>야</span> 타</Link>
 
-        <nav className="desktopNav">
+        <nav className="desktopNav" aria-label="주 메뉴">
+          {isAdmin && <Link href="/admin/instructors">관리자</Link>}
           <Link href="/map">교관 찾기</Link>
           {loggedIn && <Link href="/bookings">내 예약</Link>}
           {loggedIn && <Link href="/logbook">Logbook</Link>}
@@ -85,25 +83,13 @@ export function Header() {
 }
 
 export function BottomNav() {
-  const [role, setRole] = useState<Role>(null)
-  const [loggedIn, setLoggedIn] = useState(false)
-
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      setLoggedIn(true)
-      const { data } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
-      setRole((data?.role as Role) ?? 'learner')
-    }
-    load()
-  }, [])
+  const { role, loggedIn, isAdmin } = useAccount()
 
   return (
-    <nav className="bottomNav">
+    <nav className="bottomNav" aria-label="모바일 메뉴">
       <Link href="/"><Home size={19}/><span>홈</span></Link>
       <Link href="/map"><Search size={19}/><span>교관찾기</span></Link>
-      {role === 'instructor' ? (
+      {isAdmin ? (<Link href="/admin/instructors"><Gauge size={19}/><span>관리자</span></Link>) : role === 'instructor' ? (
         <Link href="/dashboard/instructor"><Gauge size={19}/><span>교관센터</span></Link>
       ) : (
         <Link href={loggedIn ? "/bookings" : "/login?next=%2Fbookings"}><BookOpen size={19}/><span>예약</span></Link>
@@ -115,3 +101,4 @@ export function BottomNav() {
     </nav>
   )
 }
+

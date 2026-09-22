@@ -4,12 +4,10 @@ import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { safeNext } from '@/lib/navigation'
 
 type Role = 'learner' | 'instructor'
 
-function safeNext(value: string | null) {
-  return value && value.startsWith('/') && !value.startsWith('//') ? value : null
-}
 
 function SignupContent() {
   const router = useRouter()
@@ -26,6 +24,7 @@ function SignupContent() {
 
   async function handleSignup(event: React.FormEvent) {
     event.preventDefault()
+    if (loading) return
     setMessage('')
 
     if (!role) {
@@ -37,9 +36,11 @@ function SignupContent() {
       return
     }
 
+    if (!displayName.trim()) { setMessage('이름을 입력해주세요.'); return }
     setLoading(true)
+    try {
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: email.trim(),
       password,
       options: { data: { display_name: displayName.trim(), role, ...(role === 'learner' && next ? { post_auth_next: next } : {}) }, emailRedirectTo: `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ''}` },
     })
@@ -62,7 +63,8 @@ function SignupContent() {
             : '소비자 계정 회원가입이 완료되었습니다. 이메일 인증 후 로그인해주세요.',
       )
     }
-    setLoading(false)
+    } catch { setMessage('연결을 확인한 뒤 다시 시도해주세요.') }
+    finally { setLoading(false) }
   }
 
   const roleStyle = (selected: boolean): React.CSSProperties => ({
@@ -130,7 +132,10 @@ function SignupContent() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              minLength={6}
+              minLength={12}
+              maxLength={128}
+              autoComplete="new-password"
+              placeholder="12자 이상"
               required
             />
           </label>
@@ -180,3 +185,4 @@ export default function Signup() {
     </Suspense>
   )
 }
+

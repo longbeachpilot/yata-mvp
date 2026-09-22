@@ -1,3 +1,8 @@
+-- LEGACY REFERENCE ONLY. Do not execute against the current application database.
+-- The deployed schema uses admin_users, private credentials, and booking RPCs
+-- absent from this old installer. See supabase/README.md.
+DO $$ BEGIN RAISE EXCEPTION 'Legacy setup disabled: see supabase/README.md'; END $$;
+
 -- YA TA MVP unified Supabase setup
 -- Fresh project or existing MVP project: designed to be re-runnable where practical.
 
@@ -298,3 +303,4 @@ grant select, insert on public.bookings to authenticated;
 grant select, insert on public.lesson_logs to authenticated;
 grant select, insert on public.skill_progress to authenticated;
 grant select, insert on public.reviews to anon, authenticated;
+

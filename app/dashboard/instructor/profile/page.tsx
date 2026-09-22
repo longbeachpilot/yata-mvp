@@ -10,7 +10,6 @@ type InstructorProfile = {
   area: string
   specialties: string[]
   licenses: string[]
-  license_number: string | null
   vehicle: string
   vehicle_year: number | null
   transmission: string | null
@@ -119,7 +118,6 @@ export default function InstructorProfilePage() {
             area,
             specialties,
             licenses,
-            license_number,
             vehicle,
             vehicle_year,
             transmission,
@@ -156,9 +154,9 @@ export default function InstructorProfilePage() {
         setLicenses(
           instructor.licenses || []
         )
-        setLicenseNumber(
-          instructor.license_number || ''
-        )
+        const { data: credential, error: credentialError } = await supabase.rpc('yata_get_my_credential', { target_instructor_id: instructor.id })
+        if (credentialError) { setError('자격정보를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.'); return }
+        setLicenseNumber(credential || '')
         setVehicle(
           instructor.vehicle || ''
         )
@@ -219,7 +217,7 @@ export default function InstructorProfilePage() {
   }
 
   async function handleSave() {
-    if (!profile) return
+    if (!profile || saving) return
 
     if (!name.trim()) {
       setMessage(
@@ -269,31 +267,15 @@ export default function InstructorProfilePage() {
         return
       }
 
-      const { error } = await supabase
-        .from('instructors')
-        .update({
-          name: name.trim(),
-          area: area.trim(),
-          specialties,
-          licenses,
-          license_number:
-            licenseNumber.trim() || null,
-          vehicle: vehicle.trim(),
-
-          vehicle_year: vehicleYear
-            ? Number(vehicleYear)
-            : null,
-
-          transmission,
-          dual_brake: dualBrake,
-
-          insurance_verified:
-            insuranceVerified,
-
-          intro: intro.trim() || null,
-        })
-        .eq('id', profile.id)
-        .eq('user_id', user.id)
+      const { error } = await supabase.rpc('yata_save_my_instructor', {
+        target_instructor_id: profile.id,
+        private_license_number: licenseNumber.trim() || null,
+        profile_data: {
+          name: name.trim(), area: area.trim(), specialties, licenses,
+          vehicle: vehicle.trim(), vehicle_year: vehicleYear ? Number(vehicleYear) : null,
+          transmission, dual_brake: dualBrake, intro: intro.trim() || null,
+        },
+      })
 
       if (error) {
         setMessage(
@@ -303,7 +285,7 @@ export default function InstructorProfilePage() {
       }
 
       setMessage(
-        '교관 프로필이 저장되었습니다.'
+        '교관 프로필이 저장되었습니다. 자격·차량·안전장치 정보를 변경하면 운영자 재확인 후 다시 공개됩니다.'
       )
     } catch (err) {
       console.error(err)
@@ -692,14 +674,11 @@ export default function InstructorProfilePage() {
                   checked={
                     insuranceVerified
                   }
-                  onChange={(e) =>
-                    setInsuranceVerified(
-                      e.target.checked
-                    )
-                  }
+                  disabled
+                  readOnly
                 />
 
-                운전연수 관련 보험 확인
+                운전연수 관련 보험 확인 (운영자 검토 후 반영)
               </label>
             </div>
           </section>

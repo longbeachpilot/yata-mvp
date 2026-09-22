@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
 type ProfileData = {
@@ -153,19 +154,16 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="statGrid">
-            <div><b>0h</b><span>누적 연수</span></div>
-            <div><b>0</b><span>완료 수업</span></div>
-            <div><b>-</b><span>주차 숙련도</span></div>
-          </div>
+          <p><Link href="/logbook">내 연수 시간과 숙련도 확인 →</Link></p>
           {message && <p style={{ marginTop: 18, fontWeight: 700 }}>{message}</p>}
         </section>
 
         <section className="panel">
           <h3>다음 예약</h3>
-          <div className="bookingLine"><div><b>예약 없음</b><span>아직 예정된 수업이 없습니다.</span></div></div>
+          <p>예약 요청과 확정된 일정을 내 예약에서 확인하세요.</p><Link className="primaryBtn" href="/bookings">내 예약 확인</Link>
         </section>
       </div>
     </main>
   )
 }
+

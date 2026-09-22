@@ -1,3 +1,5 @@
+> **2026-09-22 출시 점검:** 아래의 예전 DB 설치 안내보다 `supabase/README.md`가 우선합니다. `MVP_SETUP.sql`은 운영 DB에 실행하지 마세요.
+
 # YA TA 운영형 MVP v1.0
 
 운전연수 학습자와 교관을 연결하고, 예약부터 수업 기록·후기까지 관리하는 Next.js + Supabase 웹앱입니다.
@@ -40,3 +42,4 @@ where p.id=u.id and u.email='ADMIN_EMAIL';
 Vercel에 저장소를 연결하고 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`를 Production 환경 변수로 등록합니다. Supabase Authentication의 Site URL과 Redirect URLs에도 실제 Vercel 도메인을 추가합니다.
 
 운영 전 반드시 사업자 정보가 반영된 이용약관·개인정보처리방침, 교관 검증 기준, 보험 확인 절차, 취소·환불 정책과 PG 결제를 별도로 확정하세요.
+
