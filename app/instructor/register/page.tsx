@@ -126,8 +126,6 @@ export default function InstructorRegisterPage() {
       return
     }
 
-    await supabase.rpc('become_instructor')
-
     setMessage('교관 등록이 완료되었습니다.')
 
     setTimeout(() => {
@@ -255,3 +253,4 @@ export default function InstructorRegisterPage() {
     </main>
   )
 }
+

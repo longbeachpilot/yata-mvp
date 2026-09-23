@@ -4,10 +4,8 @@ import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { safeNext } from '@/lib/navigation'
 
-function safeNext(value: string | null) {
-  return value && value.startsWith('/') && !value.startsWith('//') ? value : null
-}
 
 function CallbackContent() {
   const router = useRouter()
@@ -36,7 +34,7 @@ function CallbackContent() {
       router.replace(queryNext ?? metaNext ?? '/map')
       router.refresh()
     }
-    finish()
+    void finish().catch(() => { if (active) setError('인증 상태를 확인하지 못했습니다. 연결을 확인한 뒤 다시 로그인해주세요.') })
     return () => { active = false }
   }, [router, sp])
 
@@ -47,3 +45,4 @@ function CallbackContent() {
 export default function AuthCallbackPage() {
   return <Suspense fallback={<main className="authShell"><section className="authCard">인증 정보를 확인하는 중...</section></main>}><CallbackContent /></Suspense>
 }
+
