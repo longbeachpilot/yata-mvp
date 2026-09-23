@@ -8,10 +8,12 @@ server.stderr.on('data', chunk => process.stderr.write(chunk))
 const origin = 'http://127.0.0.1:3012'
 const teacherId = '11111111-1111-4111-8111-111111111111'
 const userId = '22222222-2222-4222-8222-222222222222'
-const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+const testNow = new Date('2030-06-15T01:00:00Z') // 10:00 in Korea
+const today = '2030-06-15'
+const tomorrow = '2030-06-16'
 const instructor = { id: teacherId, name: '테스트 교관', area: '서울 강남구', specialties: ['주차'], licenses: ['2종 보통'], vehicle: '테스트 차량', base_price_2h: 90000, insurance_verified: true, dual_brake: true, active: true, intro: '', vehicle_year: null, transmission: null, rating: 0, reviews: 0, lessons: 0 }
 const user = { id: userId, email: 'test@example.invalid', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() }
-const token = ['eyJhbGciOiJIUzI1NiJ9', Buffer.from(JSON.stringify({ sub: userId, exp: Math.floor(Date.now()/1000)+3600 })).toString('base64url'), 'test'].join('.')
+const token = ['eyJhbGciOiJIUzI1NiJ9', Buffer.from(JSON.stringify({ sub: userId, exp: Math.floor(testNow.getTime()/1000)+3600 })).toString('base64url'), 'test'].join('.')
 let browser
 ;(async () => {
   await new Promise((resolve, reject) => {
@@ -22,13 +24,14 @@ let browser
   browser = await chromium.launch({ executablePath: process.env.YATA_CHROMIUM_PATH || undefined, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] })
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } })
   const page = await context.newPage()
+  await page.clock.setFixedTime(testNow)
   const pageErrors = []
   page.on('pageerror', e => pageErrors.push(e.message))
   let role = 'learner', failMap = false, savePayload = null, bookingPayload = null
   await context.route('https://not-configured.supabase.co/**', async route => {
     const url = new URL(route.request().url()), path = url.pathname
     let body = null, status = 200
-    if (path.endsWith('/auth/v1/token')) body = { access_token: token, refresh_token: 'fixture', token_type: 'bearer', expires_in: 3600, user }
+    if (path.endsWith('/auth/v1/token')) body = { access_token: token, refresh_token: 'fixture', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(testNow.getTime()/1000)+3600, user }
     else if (path.endsWith('/auth/v1/user')) body = user
     else if (path.endsWith('/rpc/is_admin')) body = false
     else if (path.endsWith('/rpc/yata_get_my_credential')) body = 'PRIVATE-TEST-CREDENTIAL'
@@ -39,9 +42,10 @@ let browser
       if (failMap) { status = 503; body = { message: 'fixture unavailable' } }
       else body = url.searchParams.has('id') || url.searchParams.has('user_id') ? instructor : [instructor]
     } else if (path.endsWith('/instructor_availability')) body = [
-      { lesson_date: '2020-01-01', start_time: '09:00', instructor_id: teacherId },
-      { lesson_date: tomorrow, start_time: '10:00', instructor_id: teacherId },
-      { lesson_date: tomorrow, start_time: '12:00', instructor_id: teacherId },
+      { id: 'past', lesson_date: today, start_time: '09:00', instructor_id: teacherId },
+      { id: 'boundary', lesson_date: today, start_time: '10:00', instructor_id: teacherId },
+      { id: 'future-1', lesson_date: tomorrow, start_time: '10:00', instructor_id: teacherId },
+      { id: 'future-2', lesson_date: tomorrow, start_time: '12:00', instructor_id: teacherId },
     ]
     else if (path.endsWith('/bookings')) body = []
     else if (path.endsWith('/instructor_service_regions')) body = [{ instructor_id: teacherId, region_name: '서울 강남구' }]
@@ -83,6 +87,15 @@ let browser
   assert.equal(savePayload.private_license_number, 'PRIVATE-TEST-CREDENTIAL')
   assert.equal('insurance_verified' in savePayload.profile_data, false)
   console.log('PASS private credential load/save and read-only insurance status')
+  await page.goto(origin + '/dashboard/instructor')
+  await page.getByRole('heading', { name: '테스트 교관 교관 대시보드' }).waitFor()
+  const publicSlots = page.locator('.dashStats > div').filter({ hasText: '공개 가능시간' })
+  assert.equal(await publicSlots.locator('b').innerText(), '2')
+  assert.equal(await page.locator('.availabilitySlot').count(), 2)
+  assert.deepEqual(await page.locator('.availabilitySlot strong').allTextContents(), [tomorrow, tomorrow])
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
+  if (process.env.YATA_DASHBOARD_SCREENSHOT) await page.screenshot({ path: process.env.YATA_DASHBOARD_SCREENSHOT, fullPage: true })
+  console.log('PASS instructor dashboard excludes elapsed and exact-start slots from count and schedule')
   failMap = true
   await page.goto(origin + '/map')
   await page.getByRole('alert').filter({ hasText: '교관 정보를 불러오지 못했습니다' }).waitFor()
