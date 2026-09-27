@@ -48,6 +48,7 @@ export default function LogbookPage() {
 
   useEffect(() => {
     async function load() {
+      try {
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -78,7 +79,8 @@ export default function LogbookPage() {
 
       if (loadError) setError('Logbook을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.')
       else setLogs((data ?? []) as unknown as Logbook[])
-      setLoading(false)
+      } catch { setError('연결을 확인한 뒤 다시 시도해주세요.') }
+      finally { setLoading(false) }
     }
 
     load()

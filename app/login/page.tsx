@@ -29,7 +29,7 @@ function LoginContent() {
         supabase.rpc('is_admin'),
       ])
       if (profileError || !profile) { setMessage('계정 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'); return }
-      if (isAdmin) router.push(next ?? '/admin/instructors')
+      if (isAdmin) router.push(next ?? '/admin/bookings')
       else if (profile.role === 'instructor') {
         const { data: instructor, error: instructorError } = await supabase.from('instructors').select('id').eq('user_id', data.user.id).maybeSingle()
         if (instructorError) { setMessage('교관 정보를 불러오지 못했습니다. 다시 시도해주세요.'); return }

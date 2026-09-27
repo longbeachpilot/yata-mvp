@@ -54,7 +54,7 @@ export function Header() {
         <Link className="brand" href="/"><span>야</span> 타</Link>
 
         <nav className="desktopNav" aria-label="주 메뉴">
-          {isAdmin && <Link href="/admin/instructors">관리자</Link>}
+          {isAdmin && <Link href="/admin/bookings">관리자</Link>}
           <Link href="/map">교관 찾기</Link>
           {loggedIn && <Link href="/bookings">내 예약</Link>}
           {loggedIn && <Link href="/logbook">Logbook</Link>}
@@ -89,7 +89,7 @@ export function BottomNav() {
     <nav className="bottomNav" aria-label="모바일 메뉴">
       <Link href="/"><Home size={19}/><span>홈</span></Link>
       <Link href="/map"><Search size={19}/><span>교관찾기</span></Link>
-      {isAdmin ? (<Link href="/admin/instructors"><Gauge size={19}/><span>관리자</span></Link>) : role === 'instructor' ? (
+      {isAdmin ? (<Link href="/admin/bookings"><Gauge size={19}/><span>관리자</span></Link>) : role === 'instructor' ? (
         <Link href="/dashboard/instructor"><Gauge size={19}/><span>교관센터</span></Link>
       ) : (
         <Link href={loggedIn ? "/bookings" : "/login?next=%2Fbookings"}><BookOpen size={19}/><span>예약</span></Link>
