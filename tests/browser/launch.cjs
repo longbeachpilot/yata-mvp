@@ -104,6 +104,7 @@ async function fillLogin(page, role) {
   await page.getByRole('button', { name: '로그인', exact: true }).click()
 }
 async function screenshot(page, name) {
+  await page.evaluate(() => window.scrollTo(0, 0))
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${name} should fit mobile width`)
   await page.screenshot({ path: `test-results/${name}.png`, fullPage: true })
 }
