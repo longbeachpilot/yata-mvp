@@ -48,7 +48,7 @@
 - `npm run check`: 시간 경계/리다이렉트/지역 매칭 단위검사, TypeScript, production build.
 - `tests/database-booking-completion.sql`: 실제 DB RPC의 시간·소유권·중복 예약·취소 규칙. 한 트랜잭션으로 실행 후 ROLLBACK.
 - `tests/database-booking-operations.sql`: 관리자 권한, 이력 소유권, 연락 기록의 멱등성/변경 충돌, 완료 전 후기 차단, 수업 기록과 6개 숙련도 조회, 중복 기록·후기 차단. 실제 DB에서 통과. 테스트 후 예약 5건·관리자 1명 유지, 테스트 사용자 0건 확인.
-- `npm run test:browser`: GitHub Actions에서 Chromium으로 390px 모바일 및 관리자 1440px 검사. 외부 API는 가상 응답으로 격리한다. 실제 회원가입, 이메일 발송, 실결제, 실제 수업 이행을 검증하지 않는다. 실행 결과는 해당 커밋의 Quality workflow에서 확인한다.
+- `npm run test:browser`: GitHub Actions에서 Chromium으로 390px 모바일 및 관리자 1440px 검사. 외부 API는 가상 응답으로 격리한다. 실제 회원가입, 이메일 발송, 실결제, 실제 수업 이행을 검증하지 않는다. 첫 실행 [Quality #147](https://github.com/longbeachpilot/yata-mvp/actions/runs/36284267826)에서 전체 흐름을 통과했다. 6개 모바일/데스크톱 스크린샷을 CI artifact로 저장했다. 이후 실행 결과는 해당 커밋의 Quality workflow에서 확인한다.
 - 실제 두 계정과 실제 휴대폰을 사용한 인증메일→예약→확정→수업→후기 리허설은 별도 남아 있다. 현 환경에서 로컬 브라우저 실행 파일이 손상되어 CI 브라우저로 검사한다.
 
 ## DB/보안 운영 주의
@@ -61,4 +61,4 @@ Supabase Advisor의 private 테이블 RLS 정책 없음 및 인증 사용자용 
 - [SECURITY DEFINER 노출 점검](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable)
 - [유출 비밀번호 보호](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)
 
-기존 원격 스키마 전체가 로컬 migration으로 재현되는지는 별도 검증이 필요하다. 테스트 데이터 ROLLBACK 검사는 백업 복원 훈련을 대체하지 않는다. 백업 보존/복구 방법을 운영 전에 확인하고 실제 개인정보 포함 백업 파일을 공개 저장소에 넣지 않는다.
+이번 이력 migration 및 직전 완료시간 migration 파일명은 원격 적용 버전(`20260927005134`, `20260927001121`)과 맞췄다. 기존 원격 스키마 전체가 로컬 migration으로 재현되는지는 별도 검증이 필요하다. 테스트 데이터 ROLLBACK 검사는 백업 복원 훈련을 대체하지 않는다. 백업 보존/복구 방법을 운영 전에 확인하고 실제 개인정보 포함 백업 파일을 공개 저장소에 넣지 않는다.
