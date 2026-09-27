@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { SUPPORT_EMAIL, supportMailto } from '@/lib/support'
+import { SUPPORT_EMAIL, OPERATOR_NAME, SUPPORT_AVAILABILITY, SUPPORT_RESPONSE_NOTE, supportMailto } from '@/lib/support'
 
 export const metadata: Metadata = {
   title: '고객 문의와 이용 안내 | YA TA',
@@ -18,6 +18,8 @@ export default function SupportPage() {
 
       <section className="contentCard supportContact" aria-labelledby="contact-title">
         <h2 id="contact-title">이메일 문의</h2>
+        <p><strong>{SUPPORT_AVAILABILITY}</strong><br/>{SUPPORT_RESPONSE_NOTE}</p>
+        <p>운영·고객 문의 담당: {OPERATOR_NAME}</p>
         <a className="supportEmail" href={supportMailto()}>{SUPPORT_EMAIL}</a>
         <p>전화 상담은 운영하지 않습니다. 메일 작성 버튼을 누른 뒤, 메일 앱에서 내용을 확인하고 직접 보내주세요.</p>
         <a className="primaryBtn" href={supportMailto()}>문의 메일 작성하기</a>
@@ -44,6 +46,7 @@ export default function SupportPage() {
 
       <section className="contentCard" id="account" aria-labelledby="account-help-title">
         <h2 id="account-help-title">계정 복구·탈퇴·개인정보 문의</h2>
+        <p>개인정보 보호책임자: {OPERATOR_NAME} · <a href={supportMailto('account')}>{SUPPORT_EMAIL}</a></p>
         <p>비밀번호를 잊으셨다면 <Link href="/reset-password">비밀번호 재설정</Link>을 이용해주세요.</p>
         <p>회원 탈퇴나 개인정보 열람·수정·삭제를 요청하려면 가입한 이메일로 요청 내용을 보내주세요. 본인 확인과 처리 범위는 회신으로 안내합니다. 메일 작성 버튼을 누르는 것만으로 탈퇴나 삭제가 완료되지는 않습니다.</p>
         <p>비밀번호, 인증번호, 신분증·운전면허증 사진은 문의 메일에 보내지 마세요.</p>
