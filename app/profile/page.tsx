@@ -161,9 +161,11 @@ export default function Profile() {
         <section className="panel">
           <h3>다음 예약</h3>
           <p>예약 요청과 확정된 일정을 내 예약에서 확인하세요.</p><Link className="primaryBtn" href="/bookings">내 예약 확인</Link>
+          <h3 style={{ marginTop: 28 }}>도움이 필요하신가요?</h3>
+          <p><Link href="/support">고객 문의와 이용 안내 →</Link></p>
+          <p><Link href="/support#account">회원 탈퇴·개인정보 문의 →</Link></p>
         </section>
       </div>
     </main>
   )
 }
-
