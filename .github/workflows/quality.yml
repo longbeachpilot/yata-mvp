@@ -12,7 +12,7 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -32,3 +32,19 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: preview-build-placeholder
+
+      - name: Install Chromium for browser contract checks
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify mobile and desktop booking journey
+        run: npm run test:browser
+        env:
+          YATA_TEST_SUPABASE_URL: https://example.supabase.co
+
+      - name: Save browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking-journey-screenshots
+          path: test-results/
+          retention-days: 7

@@ -46,7 +46,13 @@ function SignupContent() {
     })
 
     if (error) {
-      setMessage(`회원가입 실패: ${error.message}`)
+      const code = error.code || ''
+      setMessage(code === 'over_email_send_rate_limit' || /email rate limit/i.test(error.message)
+        ? '현재 인증 메일 발송 한도에 도달했습니다. 반복해서 가입하지 말고 잠시 후 다시 시도해주세요. 계속되면 고객 문의로 알려주세요.'
+        : code === 'over_request_rate_limit' || error.status === 429
+          ? '요청이 많아 잠시 제한되었습니다. 잠시 후 다시 시도해주세요.'
+          : code === 'weak_password' ? '더 안전한 비밀번호를 사용해주세요. 12자 이상으로 입력해주세요.'
+            : '회원가입을 완료하지 못했습니다. 입력 내용을 확인하고 다시 시도해주세요. 이미 가입했다면 로그인 또는 비밀번호 재설정을 이용해주세요.')
       setLoading(false)
       return
     }
@@ -163,7 +169,7 @@ function SignupContent() {
           </button>
         </form>
 
-        {message && <p style={{ marginTop: 16, fontWeight: 700 }}>{message}</p>}
+        {message && <p role="status" style={{ marginTop: 16, fontWeight: 700 }}>{message} <Link href="/support">고객 문의</Link></p>}
         <p className="authFoot">
           이미 계정이 있나요? <Link href={loginHref}>로그인</Link>
         </p>

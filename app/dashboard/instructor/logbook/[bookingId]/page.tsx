@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -58,6 +59,7 @@ export default function InstructorLogbookPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [savedLog, setSavedLog] = useState<{minutes:number;instructor_note:string;next_goal:string|null}|null>(null)
 
   useEffect(() => {
     async function loadData() {
@@ -121,6 +123,10 @@ export default function InstructorLogbookPage() {
           return
         }
 
+        const { data: existingLog, error: logError } = await supabase.from('lesson_logs')
+          .select('minutes,instructor_note,next_goal').eq('booking_id', bookingId).maybeSingle()
+        if (logError) { setError('저장된 수업 기록을 확인하지 못했습니다. 다시 확인해주세요.'); return }
+        setSavedLog(existingLog)
         setBooking(bookingData as Booking)
 
         if (bookingData.duration_minutes) {
@@ -150,7 +156,7 @@ export default function InstructorLogbookPage() {
   }
 
   async function handleSave() {
-    if (!booking || !instructor) return
+    if (!booking || !instructor || saving) return
 
     if (!note.trim()) {
       setMessage('교관 코멘트를 입력해주세요.')
@@ -245,6 +251,14 @@ export default function InstructorLogbookPage() {
   if (!booking || !instructor) {
     return null
   }
+
+  if (savedLog) return <main className="container section pageTop narrow"><section className="panel">
+    <h1>저장된 수업 기록</h1><p>{booking.lesson_date} · {booking.start_time} · {savedLog.minutes}분</p>
+    <h2>교관 코멘트</h2><p>{savedLog.instructor_note}</p>
+    {savedLog.next_goal && <><h2>다음 수업 목표</h2><p>{savedLog.next_goal}</p></>}
+    <p>이 수업의 Logbook은 이미 저장되어 있습니다. 정정이 필요하면 고객 문의로 알려주세요.</p>
+    <div className="supportLinks"><Link href="/dashboard/instructor">대시보드로 돌아가기</Link><Link href="/support">고객 문의</Link></div>
+  </section></main>
 
   const skillItems = [
     {
@@ -387,6 +401,7 @@ export default function InstructorLogbookPage() {
                   </div>
 
                   <input
+                    aria-label={skill.label}
                     type="range"
                     min="0"
                     max="100"
