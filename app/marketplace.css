@@ -3,3 +3,18 @@
 @media(max-width:520px){.marketplaceCard{padding:14px}.marketplaceCard .rating{flex-wrap:wrap}.marketplaceCard .rating span{width:100%;margin-left:20px}.filterChips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px}.filterChips button{white-space:nowrap}.trustNotice{padding:14px}.bookingCta{padding:20px}.bookingSummary{padding:16px;gap:13px}.bookingSummary .summaryRow{padding:10px 0}.availabilityForm{grid-template-columns:1fr}.availabilityForm .primaryBtn{grid-column:1}.availabilitySlot{align-items:flex-start}.yataMapSearch{display:grid;grid-template-columns:auto 1fr;padding:8px 10px}.yataMapSearch input{width:100%}.yataMapSearch select{grid-column:1/-1;max-width:none;width:100%;min-height:44px}.yataMapSearch .primaryBtn{grid-column:1/-1;width:100%}.yataMapCanvasWrap{height:330px}.yataMapSelected{left:10px;right:10px;bottom:10px}.yataMapCard{padding:13px}.yataMapPrice b{font-size:13px}.bookingRow{display:grid;grid-template-columns:auto 1fr}.bookingRow>.status{grid-column:2}.bookingRow>div:last-child{grid-column:1/-1}.bookingRow>div:last-child a,.bookingRow>div:last-child button{min-height:40px;padding:8px 10px}}
 
 .bookingJourney{display:flex;gap:8;align-items:center;flex-wrap:wrap;margin:10px 0}.bookingJourney span{font-size:12px;font-weight:700;padding:6px 9px;border-radius:999px;background:#f3f3f3;color:#777}.bookingJourney span.done{background:#eef7f0;color:#25723a}.bookingJourney span.current{background:#fff0e9;color:#c73b09}.bookingJourney span.cancelled{background:#f7eeee;color:#9b3434}@media(max-width:520px){.bookingJourney{width:100%}.bookingJourney span{flex:1;text-align:center;min-width:78px}}
+
+/* Shared customer support and direct-payment guidance. */
+.siteFooter{border-top:1px solid var(--line);padding:28px 0 90px;text-align:center;color:#666;font-size:13px;line-height:1.7}
+.siteFooter .legalLinks{padding:0;flex-wrap:wrap;gap:12px 20px;color:#555;font-size:13px}
+.siteFooter p{margin:12px 0 0}.siteFooter a{overflow-wrap:anywhere}.siteFooter p:last-child{font-size:12px;color:#777}
+.supportPage .pageTitle p{display:block;line-height:1.7}.supportPage .contentCard{margin-top:20px}.supportPage h2{font-size:21px;margin:0 0 14px;line-height:1.4}
+.supportPage p,.supportPage li{line-height:1.85;font-size:15px;color:#555}.supportPage li+li{margin-top:10px}.supportPage ol{padding-left:22px}
+.supportPage p a,.supportPage li a,.supportLinks a,.bookingGuidance>a,.bookingHelpBar p a{text-decoration:underline;text-underline-offset:3px;color:#ba370b}
+.supportEmail{display:inline-block;color:#ba370b;font-weight:800;font-size:clamp(18px,4vw,24px);overflow-wrap:anywhere;max-width:100%}
+.supportPage .supportHint{font-size:13px;color:#666}.supportPage .ghostBtn{display:inline-flex;line-height:1.5}.supportLinks{display:flex;gap:16px;flex-wrap:wrap;font-size:14px}
+.supportPage #account{scroll-margin-top:92px}
+.bookingSummary>.bookingGuidance{grid-column:1/-1}.bookingGuidance{padding:18px;background:#fff7f2;border:1px solid #f1ded1;border-radius:14px;font-size:14px;line-height:1.7}
+.bookingGuidance ul{padding-left:18px;margin:10px 0 12px}.bookingGuidance li+li{margin-top:8px}
+.bookingRow>.bookingStatusHelp{flex-basis:100%;grid-column:1/-1;display:block;margin:0 0 12px;font-size:13px;line-height:1.7;color:#666}
+.bookingHelpBar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0}.bookingHelpBar p{font-size:14px;line-height:1.7;margin:0;color:#555}.bookingHelpBar button{flex:none}

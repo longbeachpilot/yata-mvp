@@ -3,6 +3,7 @@ import './marketplace.css'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { BottomNav, Header } from '@/components/navigation'
+import { SUPPORT_EMAIL, supportMailto } from '@/lib/support'
 
 export const metadata: Metadata = {
   title: '야 타 | 내 주변 운전 교관 찾기',
@@ -15,7 +16,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Header />
         <main>{children}</main>
-        <div className="legalLinks"><Link href="/terms">이용약관</Link><Link href="/privacy">개인정보처리방침</Link></div>
+        <footer className="siteFooter">
+          <div className="container">
+            <nav className="legalLinks" aria-label="이용 안내">
+              <Link href="/support">고객 문의</Link>
+              <Link href="/terms">이용약관</Link>
+              <Link href="/privacy">개인정보처리방침</Link>
+            </nav>
+            <p>이메일 문의 · <a href={supportMailto()}>{SUPPORT_EMAIL}</a></p>
+            <p>YA TA · WEED 설립 준비</p>
+          </div>
+        </footer>
         <BottomNav />
       </body>
     </html>
