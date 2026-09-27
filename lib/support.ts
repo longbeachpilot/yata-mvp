@@ -1,4 +1,7 @@
 export const SUPPORT_EMAIL = 'ssk04058@gmail.com'
+export const OPERATOR_NAME = '윤상준'
+export const SUPPORT_AVAILABILITY = '상시 이메일 접수·응대 가능'
+export const SUPPORT_RESPONSE_NOTE = '문의 내용과 확인 상황에 따라 답변까지 시간이 걸릴 수 있습니다.'
 
 export function supportMailto(topic: 'general' | 'booking' | 'account' = 'general', bookingId?: string): string {
   const subjects = {
