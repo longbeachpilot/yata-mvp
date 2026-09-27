@@ -11,7 +11,7 @@ function load(path) {
   return module.exports
 }
 const { safeNext } = load('lib/navigation.ts')
-const { isFutureSlot, koreaToday } = load('lib/booking-time.ts')
+const { isFutureSlot, koreaToday, hasLessonEnded } = load('lib/booking-time.ts')
 const { matchesServiceRegion } = load('lib/regions.ts')
 test('booking return paths survive login without opening another origin', () => {
   assert.equal(safeNext('/book?instructor=abc&pickup=%EC%84%9C%EC%9A%B8'), '/book?instructor=abc&pickup=%EC%84%9C%EC%9A%B8')
@@ -32,4 +32,19 @@ test('service regions match every administrative component', () => {
   assert.equal(matchesServiceRegion('부산광역시 강서구', '서울 강서구'), false)
   assert.equal(matchesServiceRegion('경기도 성남시 분당구', '경기도 성남시'), true)
   assert.equal(matchesServiceRegion('서울특별시 강남구', ''), false)
+})
+test('completion waits for the full lesson duration in Seoul time', () => {
+  const lesson = { lesson_date: '2026-09-27', start_time: '10:00', duration_minutes: 120 }
+  const end = Date.parse('2026-09-27T03:00:00Z') // 12:00 Seoul
+  assert.equal(hasLessonEnded(lesson, end - 3 * 60 * 60_000), false) // before start
+  assert.equal(hasLessonEnded(lesson, end - 60 * 60_000), false) // in progress
+  assert.equal(hasLessonEnded(lesson, end - 1), false)
+  assert.equal(hasLessonEnded(lesson, end), true)
+  assert.equal(hasLessonEnded({ ...lesson, start_time: '10:00:00' }, end + 1), true)
+  assert.equal(hasLessonEnded({ ...lesson, lesson_date: '2026-09-28', start_time: '00:00' }, Date.parse('2026-09-27T17:00:00Z')), true)
+  for (const invalid of [
+    { duration_minutes: 0 }, { duration_minutes: -120 }, { duration_minutes: null },
+    { duration_minutes: 1.5 }, { start_time: '24:00' }, { start_time: '' },
+    { lesson_date: '2026-02-30' }, { lesson_date: '' },
+  ]) assert.equal(hasLessonEnded({ ...lesson, ...invalid }, end), false)
 })

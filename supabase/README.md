@@ -25,3 +25,11 @@ Changes:
 The original verification also executed the migration DDL inside the same rollback transaction before applying it. Authorization is checked as `authenticated`, using synthetic JWT subjects. Tests cover allowed profile edits, rejected role edits, unauthorized administrator/credential access, past time, invalid duration, midnight crossing, exact and overlapping bookings, learner overlap, server pricing and self-verification attempts.
 
 Intentional security-definer RPCs remain callable by authenticated users and must continue checking ownership/admin capability internally. Private credential/admin tables intentionally have no client RLS policies. Neither warning is a reason to grant blanket access. Leaked-password protection remains an Auth configuration follow-up.
+
+## Scheduled lesson completion (2026-09-27)
+
+`migrations/20260927001019_prevent_early_booking_completion.sql` updates the existing instructor transition RPC. A confirmed booking can only become completed at or after its scheduled end (`lesson_date + start_time + duration_minutes`, Asia/Seoul). Before then it stays confirmed, so the existing instructor and learner overlap checks keep blocking conflicting bookings. Ownership, row locking, valid transitions, cancellation and duplicate-click handling remain enforced. No booking rows are changed by the migration.
+
+`tests/database-booking-completion.sql` must also run as one complete BEGIN/ROLLBACK batch. It checks missing authentication, ownership, future and in-progress completion rejection, both overlap checks after rejection, post-end completion, duplicate clicks, prohibited backwards transitions, cancellation and rebooking. It uses a non-Korean session timezone to check the explicit Seoul conversion. All users and bookings are synthetic and rolled back.
+
+The dashboard disables completion until the scheduled end and refreshes its clock while open. The database remains authoritative if the browser clock is wrong or an RPC is called directly. `npm run check` covers the date helper's exact end boundary, timezone boundary and invalid schedules in addition to the existing checks.
