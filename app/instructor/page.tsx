@@ -28,9 +28,9 @@ export default function InstructorPage() {
     },
     {
       Icon: WalletCards,
-      title: '예약·정산',
+      title: '예약·수업 관리',
       description:
-        '일정 관리부터 예약, 결제, 정산까지 한 곳에서',
+        '가능 시간 등록부터 예약 요청·확정과 수업 기록까지',
     },
   ]
 

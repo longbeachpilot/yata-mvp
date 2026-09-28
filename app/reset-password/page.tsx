@@ -65,7 +65,10 @@ export default function ResetPasswordPage() {
       setMessage('가입된 이메일이면 복구 메일이 발송됩니다. 스팸함도 확인하고, 메일의 링크를 이 컴퓨터에서 열어주세요.')
       setCooldown(60)
     } catch (err) {
-      setError(err instanceof Error ? err.message : '복구 메일을 보내지 못했습니다.')
+      const code = (err as {code?:string})?.code
+      setError(code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit'
+        ? '메일 발송 요청이 많아 잠시 제한되었습니다. 잠시 후 다시 요청해주세요.'
+        : '복구 메일을 보내지 못했습니다. 연결을 확인한 뒤 다시 시도해주세요.')
     } finally { setBusy(false) }
   }
 
@@ -84,7 +87,7 @@ export default function ResetPasswordPage() {
       const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' })
       if (signOutError) setMessage('비밀번호는 변경되었습니다. 상단 로그아웃을 누른 뒤 새 비밀번호로 로그인해주세요.')
     } catch (err) {
-      setError(err instanceof Error ? err.message : '비밀번호를 변경하지 못했습니다.')
+      setError('비밀번호를 변경하지 못했습니다. 이전과 다른 12자 이상의 비밀번호로 다시 시도해주세요.')
     } finally { setBusy(false) }
   }
 

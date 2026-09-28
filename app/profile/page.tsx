@@ -27,7 +27,7 @@ export default function Profile() {
   const loadProfile = async () => {
     setLoading(true)
     setError('')
-
+    try {
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
     if (userError || !user) {
@@ -43,7 +43,7 @@ export default function Profile() {
       .maybeSingle()
 
     if (profileError) {
-      setError(`프로필을 불러오지 못했습니다: ${profileError.message}`)
+      setError('프로필을 불러오지 못했습니다. 다시 시도해주세요.')
       setLoading(false)
       return
     }
@@ -59,13 +59,14 @@ export default function Profile() {
     setDisplayName(p.display_name || '')
     setPhone(p.phone || '')
     setHomeArea(p.home_area || '')
-    setLoading(false)
+    } catch { setError('프로필을 불러오지 못했습니다. 연결을 확인한 뒤 다시 시도해주세요.') }
+    finally { setLoading(false) }
   }
 
   useEffect(() => { loadProfile() }, [])
 
   const handleSave = async () => {
-    if (!profile) return
+    if (!profile || saving) return
     if (!displayName.trim()) {
       setMessage('이름을 입력해주세요.')
       return
@@ -74,7 +75,8 @@ export default function Profile() {
     setSaving(true)
     setMessage('')
 
-    const { error: updateError } = await supabase
+    try {
+    const { data: updated, error: updateError } = await supabase
       .from('profiles')
       .update({
         display_name: displayName.trim(),
@@ -82,17 +84,14 @@ export default function Profile() {
         home_area: homeArea.trim() || null,
       })
       .eq('id', profile.id)
+      .select('id, role, display_name, phone, avatar_url, home_area').single()
 
-    if (updateError) {
-      setMessage(`저장 실패: ${updateError.message}`)
-      setSaving(false)
-      return
-    }
-
-    await loadProfile()
+    if (updateError || !updated) throw updateError
+    setProfile(updated as ProfileData)
     setEditing(false)
-    setSaving(false)
     setMessage('프로필이 저장되었습니다.')
+    } catch { setMessage('저장 결과를 확인하지 못했습니다. 입력 내용은 유지됩니다. 다시 시도해주세요.') }
+    finally { setSaving(false) }
   }
 
   const handleCancel = () => {
@@ -105,12 +104,15 @@ export default function Profile() {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    window.location.href = '/login'
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      window.location.href = '/login'
+    } catch { setMessage('로그아웃하지 못했습니다. 연결을 확인한 뒤 다시 시도해주세요.') }
   }
 
   if (loading) return <main className="container section"><p>프로필을 불러오는 중...</p></main>
-  if (error) return <main className="container section"><p>{error}</p></main>
+  if (error) return <main className="container section"><p role="alert">{error}</p><button onClick={() => void loadProfile()}>다시 시도</button><Link href="/login?next=%2Fprofile">로그인</Link></main>
   if (!profile) return null
 
   const roleLabel = profile.role === 'instructor' ? '운전 교관' : profile.role === 'admin' ? '관리자' : '운전연수 학습자'

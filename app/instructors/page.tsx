@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { MapPin, Search, SlidersHorizontal, ShieldCheck } from 'lucide-react'
 import { InstructorCard } from '@/components/instructor-card'
 import { supabase } from '@/lib/supabase'
+import { matchesServiceRegion } from '@/lib/regions'
 
 type Instructor = {
   id: string
@@ -29,15 +30,17 @@ export default function InstructorsPage() {
 
   useEffect(() => {
     async function loadInstructors() {
+      try {
       const { data, error } = await supabase
         .from('instructors')
         .select('id,name,area,specialties,licenses,vehicle,rating,reviews,lessons,next_slot,intro,active')
         .eq('active', true)
         .order('rating', { ascending: false })
 
-      if (error) setError(error.message)
+      if (error) setError('교관 정보를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.')
       else setInstructors(data ?? [])
-      setLoading(false)
+      } catch { setError('교관 정보를 불러오지 못했습니다. 연결을 확인한 뒤 다시 시도해주세요.') }
+      finally { setLoading(false) }
     }
     loadInstructors()
   }, [])
@@ -55,7 +58,8 @@ export default function InstructorsPage() {
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
-      return matchesSpecialty && (!keyword || haystack.includes(keyword))
+      return matchesSpecialty && (!keyword || haystack.includes(keyword) ||
+        item.area.split(/[,·/;\n]+/).some(region => matchesServiceRegion(keyword, region.trim()) || matchesServiceRegion(region.trim(), keyword)))
     })
   }, [instructors, query, specialty])
 
