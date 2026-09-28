@@ -42,10 +42,18 @@ function useAccount() {
 
 export function Header() {
   const { role, loggedIn, isAdmin } = useAccount()
+  const [logoutError, setLogoutError] = useState('')
+  const [loggingOut, setLoggingOut] = useState(false)
 
   async function logout() {
-    await supabase.auth.signOut()
-    window.location.href = '/'
+    if (loggingOut) return
+    setLoggingOut(true); setLogoutError('')
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      window.location.href = '/'
+    } catch { setLogoutError('로그아웃하지 못했습니다. 연결을 확인하고 다시 시도해주세요.') }
+    finally { setLoggingOut(false) }
   }
 
   return (
@@ -73,11 +81,12 @@ export function Header() {
               <Link className="ghostBtn" href={role === 'instructor' ? '/dashboard/instructor/profile' : '/profile'}>
                 내 프로필
               </Link>
-              <button className="primarySmall" type="button" onClick={logout}>로그아웃</button>
+              <button className="primarySmall" type="button" disabled={loggingOut} onClick={logout}>{loggingOut ? '로그아웃 중...' : '로그아웃'}</button>
             </>
           )}
         </div>
       </div>
+      {logoutError && <p role="alert" className="container bookingError">{logoutError}</p>}
     </header>
   )
 }
@@ -101,4 +110,3 @@ export function BottomNav() {
     </nav>
   )
 }
-

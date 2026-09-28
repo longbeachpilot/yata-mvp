@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -61,10 +62,10 @@ export default function InstructorRegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-
+    if (loading) return
     setLoading(true)
     setMessage('')
-
+    try {
     const {
       data: { user },
       error: userError,
@@ -128,11 +129,9 @@ export default function InstructorRegisterPage() {
 
     setMessage('교관 등록이 완료되었습니다.')
 
-    setTimeout(() => {
-      router.push('/dashboard/instructor')
-    }, 800)
-
-    setLoading(false)
+    router.push('/dashboard/instructor')
+    } catch { setMessage('등록 결과를 확인하지 못했습니다. 다시 등록하기 전에 교관센터에서 확인해주세요.') }
+    finally { setLoading(false) }
   }
 
   const inputStyle = {
@@ -246,6 +245,7 @@ export default function InstructorRegisterPage() {
               }}
             >
               {message}
+              {message === '로그인이 필요합니다.' && <Link href="/login?next=%2Finstructor%2Fregister"> 로그인으로 이동</Link>}
             </p>
           )}
         </form>
@@ -253,4 +253,3 @@ export default function InstructorRegisterPage() {
     </main>
   )
 }
-

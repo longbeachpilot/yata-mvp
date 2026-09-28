@@ -31,7 +31,20 @@ function CallbackContent() {
       }
       const metaNext = safeNext(data.session.user.user_metadata?.post_auth_next ?? null)
       const queryNext = safeNext(sp.get('next'))
-      router.replace(queryNext ?? metaNext ?? '/map')
+      const [{ data: profile, error: profileError }, { data: isAdmin, error: adminError }] = await Promise.all([
+        supabase.from('profiles').select('role').eq('id', data.session.user.id).maybeSingle(),
+        supabase.rpc('is_admin'),
+      ])
+      if (profileError || adminError || !profile) throw profileError || adminError || new Error('PROFILE_REQUIRED')
+      let destination = queryNext ?? metaNext ?? '/map'
+      if (isAdmin) destination = queryNext ?? '/admin/bookings'
+      else if (profile.role === 'instructor') {
+        const { data: instructor, error: instructorError } = await supabase.from('instructors').select('id').eq('user_id', data.session.user.id).maybeSingle()
+        if (instructorError) throw instructorError
+        destination = instructor ? '/dashboard/instructor' : '/instructor/register'
+      }
+      if (!active) return
+      router.replace(destination)
       router.refresh()
     }
     void finish().catch(() => { if (active) setError('인증 상태를 확인하지 못했습니다. 연결을 확인한 뒤 다시 로그인해주세요.') })
@@ -45,4 +58,3 @@ function CallbackContent() {
 export default function AuthCallbackPage() {
   return <Suspense fallback={<main className="authShell"><section className="authCard">인증 정보를 확인하는 중...</section></main>}><CallbackContent /></Suspense>
 }
-

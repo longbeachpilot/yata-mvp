@@ -24,6 +24,7 @@ test('Korean midnight and elapsed lesson times are respected', () => {
   assert.equal(isFutureSlot({ lesson_date: '2026-09-22', start_time: '10:01' }, now), true)
   assert.equal(isFutureSlot({ lesson_date: '2026-09-23', start_time: '00:00:00' }, now), true)
   assert.equal(isFutureSlot({ lesson_date: '2026-09-23', start_time: '24:30' }, now), false)
+  assert.equal(isFutureSlot({ lesson_date: '2030-02-30', start_time: '10:00' }, now), false)
   assert.equal(koreaToday(new Date('2026-09-21T15:00:00Z')), '2026-09-22')
 })
 test('service regions match every administrative component', () => {

@@ -10,6 +10,8 @@ export function koreaToday(now = new Date()): string {
 export function isFutureSlot(slot: LessonSlot, now = Date.now()): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(slot.lesson_date) ||
       !/^(?:[01]\d|2[0-3]):[0-5]\d(?::00)?$/.test(slot.start_time)) return false
+  const date = Date.parse(`${slot.lesson_date}T00:00:00Z`)
+  if (!Number.isFinite(date) || new Date(date).toISOString().slice(0, 10) !== slot.lesson_date) return false
   const start = Date.parse(`${slot.lesson_date}T${slot.start_time.slice(0, 5)}:00+09:00`)
   return Number.isFinite(start) && start > now
 }
