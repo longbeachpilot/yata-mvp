@@ -32,6 +32,7 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: preview-build-placeholder
+          NEXT_PUBLIC_KAKAO_JS_KEY: browser-test-placeholder
 
       - name: Install Chromium for browser contract checks
         run: npx playwright install --with-deps chromium
