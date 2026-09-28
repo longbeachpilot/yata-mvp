@@ -15,8 +15,8 @@ export default function AdminInstructorsPage() {
     setLoading(true); setError(''); setItems([])
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError) throw userError
       if (!user) { router.replace('/login?next=%2Fadmin%2Finstructors'); return }
+      if (userError) throw userError
       const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin')
       if (adminError) throw adminError
       if (isAdmin !== true) { setError('관리자 권한이 필요합니다.'); return }
