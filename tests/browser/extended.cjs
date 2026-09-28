@@ -81,7 +81,7 @@ module.exports = async function extended({ browser, origin, apiOrigin, kakaoFixt
     guestState.hasInstructor = true
     console.log('PASS public pages, mobile width, missing instructor/booking parameters and anonymous route guards')
 
-    const next = '/book?instructor=' + instructor.id + '&pickup=서울'
+    const next = '/book?instructor=' + instructor.id + '&pickup=' + encodeURIComponent('서울')
     await guest.goto(origin + '/signup?next=' + encodeURIComponent(next))
     assert.equal(await guest.getByRole('button', { name: '소비자로 가입하기' }).isDisabled(), true)
     await guest.getByLabel('이름', { exact: true }).fill('검증 사용자')
