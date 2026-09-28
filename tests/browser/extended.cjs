@@ -51,7 +51,7 @@ module.exports = async function extended({ browser, origin, apiOrigin, kakaoFixt
       else if (['bookings', 'lesson_logs', 'admin_list_bookings', 'get_booking_history'].includes(name)) body = []
       else if (name === 'yata_get_my_credential') body = null
       else { errors.push(`Unhandled API ${method} ${path}`); status = 500; body = { message: 'unknown fixture' } }
-      await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
+      await route.fulfill({ status, headers: { 'X-Supabase-Api-Version': '2024-01-01' }, contentType: 'application/json', body: JSON.stringify(body) })
     })
     return { page, state }
   }

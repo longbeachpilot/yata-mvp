@@ -65,8 +65,8 @@ export default function ResetPasswordPage() {
       setMessage('가입된 이메일이면 복구 메일이 발송됩니다. 스팸함도 확인하고, 메일의 링크를 이 컴퓨터에서 열어주세요.')
       setCooldown(60)
     } catch (err) {
-      const code = (err as {code?:string})?.code
-      setError(code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit'
+      const authError = err as {code?:string;status?:number}
+      setError(authError?.code === 'over_email_send_rate_limit' || authError?.code === 'over_request_rate_limit' || authError?.status === 429
         ? '메일 발송 요청이 많아 잠시 제한되었습니다. 잠시 후 다시 요청해주세요.'
         : '복구 메일을 보내지 못했습니다. 연결을 확인한 뒤 다시 시도해주세요.')
     } finally { setBusy(false) }
