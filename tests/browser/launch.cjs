@@ -21,6 +21,34 @@ const slots = [
 let browser, server, booking = null, log = null, history = [], contact = {}, eventId = 0
 let failMap = false, failBookings = false, staleContact = false, savePayload, bookingPayload
 const pageErrors = [], externalRequests = [], pages = []
+// Realistic Kakao responses, deliberately different from the saved short name.
+// No live map API calls or keys are used by this browser contract suite.
+const kakaoFixture = `
+window.kakao = { maps: {
+  load: callback => callback(),
+  LatLng: class { constructor(lat, lng) { this.lat = lat; this.lng = lng } },
+  Map: class { relayout() {} setCenter() {} setLevel() {} },
+  Marker: class { setMap() {} },
+  services: {
+    Status: { OK: 'OK' },
+    Geocoder: class { addressSearch(query, callback) {
+      const addresses = {
+        '강남': '서울 강남구',
+        '강남구': '서울 강남구',
+        '서울특별시 강남구 역삼동': '서울 강남구 역삼동',
+        '서울 노원구': '서울 노원구'
+      };
+      const address = addresses[query];
+      callback(address ? [{ address_name: address, x: '127.0276', y: '37.4979' }] : [], address ? 'OK' : 'ZERO_RESULT');
+    } },
+    Places: class { keywordSearch(query, callback) {
+      const addresses = { '강남역': '서울 강남구 강남대로 396', '판교역': '경기 성남시 분당구 판교역로 160' };
+      const address = addresses[query];
+      callback(address ? [{ road_address_name: address, x: '127.0276', y: '37.4979' }] : [], address ? 'OK' : 'ZERO_RESULT');
+    } }
+  }
+} };
+`
 function record(status) {
   eventId++
   history.unshift({ id: eventId, status, event_type: eventId === 1 ? 'created' : 'status_changed', previous_status: booking?.status || null, recipient_role: null, occurred_at: testNow.toISOString() })
@@ -43,6 +71,8 @@ async function newSession(role) {
     externalRequests.push(route.request().url())
     await route.abort()
   })
+  await context.route('https://dapi.kakao.com/v2/maps/sdk.js?*', route =>
+    route.fulfill({ contentType: 'application/javascript', body: kakaoFixture }))
   await context.route(apiOrigin + '/**', async route => {
     const req = route.request(), url = new URL(req.url()), path = url.pathname
     let body = null, status = 200
@@ -88,7 +118,7 @@ async function newSession(role) {
       if (failBookings) { status = 503; body = { message: 'fixture unavailable' } }
       else body = url.searchParams.has('id') ? booking : booking ? [booking] : []
     } else if (path.endsWith('/lesson_logs')) body = url.searchParams.has('booking_id') ? log : log ? [log] : []
-    else if (path.endsWith('/instructor_service_regions')) body = [{ instructor_id: teacherId, region_name: '서울 강남구' }]
+    else if (path.endsWith('/instructor_service_regions')) body = [{ instructor_id: teacherId, region_name: '서울 강남' }]
     else { pageErrors.push(`Unexpected mocked request: ${path}`); status = 500; body = { message: 'Unexpected fixture request' } }
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
   })
@@ -127,6 +157,33 @@ async function screenshot(page, name) {
   await learner.locator('.yataMapCard').filter({ hasText: '테스트 교관' }).waitFor()
   assert.equal(await learner.locator('.yataMapCard').count(), 1)
   console.log('PASS instructor discovery list and next available schedule')
+  for (const query of ['강남', '강남구', '서울특별시 강남구 역삼동', '강남역']) {
+    await learner.getByLabel('연수 지역 검색').fill(query)
+    await learner.getByRole('button', { name: '지역 검색', exact: true }).click()
+    await learner.locator('.yataMapSelected').getByText(/서울 강남구/).waitFor()
+    await learner.locator('.yataMapCard').filter({ hasText: '테스트 교관' }).waitFor()
+    assert.equal(await learner.locator('.yataMapCard').count(), 1, query)
+  }
+  await screenshot(learner, '00-region-search-mobile')
+  for (const query of ['서울 노원구', '판교역']) {
+    await learner.getByLabel('연수 지역 검색').fill(query)
+    await learner.getByRole('button', { name: '지역 검색', exact: true }).click()
+    await learner.getByText('조건에 맞는 등록 교관이 없습니다.', { exact: false }).waitFor()
+    assert.equal(await learner.locator('.yataMapCard').count(), 0, query)
+  }
+  // The homepage search must automatically resolve the region on /map too.
+  await learner.goto(origin)
+  await learner.getByLabel('연수 지역', { exact: true }).fill('강남역')
+  await learner.getByRole('button', { name: '교관 찾기', exact: true }).click()
+  await learner.waitForURL('**/map?q=*')
+  await learner.locator('.yataMapSelected').getByText('서울 강남구 강남대로 396', { exact: true }).waitFor()
+  const regionLink = learner.locator('.yataMapCard').filter({ hasText: '테스트 교관' })
+  assert.equal(new URL(await regionLink.getAttribute('href'), origin).searchParams.get('pickup'), '서울 강남구 강남대로 396')
+  await learner.getByLabel('연수 목적').selectOption('야간운전')
+  await learner.getByText('조건에 맞는 등록 교관이 없습니다.', { exact: false }).waitFor()
+  await learner.getByLabel('연수 목적').selectOption('주차')
+  await regionLink.waitFor()
+  console.log('PASS short-name region search, keyword fallback, homepage auto-search, correct exclusions and purpose filter')
   await learner.locator('.yataMapCard').filter({ hasText: '테스트 교관' }).click()
   await learner.getByRole('link', { name: '이 교관에게 예약 요청' }).click()
   await learner.getByRole('button', { name: '예약 요청하기' }).waitFor()
