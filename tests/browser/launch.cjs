@@ -210,6 +210,8 @@ async function screenshot(page, name) {
   assert.deepEqual(await learner.getByLabel('가능 시간').locator('option').allTextContents(), ['10:00', '12:00'])
   assert.equal(await learner.getByLabel('가능 날짜').inputValue(), tomorrow)
   await learner.getByLabel('가능 시간').selectOption('12:00')
+  await learner.locator('.reservationRecap').getByText('2030-06-16 · 12:00 · 2시간', { exact: true }).waitFor()
+  assert.equal(await learner.locator('.reservationSteps [aria-current=step]').innerText(), '2 일정 확인·요청')
   await learner.getByPlaceholder('예: 서울 강남구 역삼동').fill('서울 강남구 역삼동')
   await learner.getByRole('button', { name: '예약 요청하기' }).click()
   await learner.waitForURL('**/login?next=*')
@@ -232,6 +234,9 @@ async function screenshot(page, name) {
   await teacher.getByRole('heading', { name: '테스트 교관 교관 대시보드' }).waitFor()
   assert.equal(await teacher.locator('.dashStats > div').filter({ hasText: '공개 가능시간' }).locator('b').innerText(), '2')
   assert.equal(await teacher.locator('.availabilitySlot').count(), 2)
+  assert.equal(await teacher.getByRole('navigation', { name: '모바일 메뉴' }).getByRole('link', { name: '교관센터' }).getAttribute('aria-current'), 'page')
+  await teacher.getByRole('navigation', { name: '교관센터 바로가기' }).getByRole('link', { name: '예약 관리', exact: false }).click()
+  assert.equal(new URL(teacher.url()).hash, '#instructor-bookings')
   // Multiple dates × times, duplicate/conflict exclusions, and failed batch recovery.
   await teacher.getByRole('button', { name: '10:00 시작', exact: true }).click()
   await teacher.getByRole('button', { name: '12:00 시작', exact: true }).click()
