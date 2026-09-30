@@ -9,7 +9,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .skipLink{position:fixed;top:8px;left:12px;transform:translateY(-150%);z-index:200;background:#171717;color:#fff;padding:12px 18px;border-radius:12px}.skipLink:focus{transform:translateY(0)}
 .desktopNav a{position:relative;padding:10px 0}.desktopNav a[aria-current=page]{color:#b8350a}.desktopNav a[aria-current=page]:after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:3px;background:var(--accent)}
 .bottomNav a[aria-current=page]{color:#b8350a;font-weight:800;background:#fff3ec}.bottomNav a[aria-current=page] svg{stroke-width:2.5}
-.header .logoutBtn{color:#626262;background:#fff;font-size:13px}.headerInner{gap:16px}.header .navActions{flex-shrink:0}
+.header .logoutBtn{color:#626262;background:#fff;font-size:13px}.headerInner{gap:16px}.header .navActions{display:flex;flex-shrink:0}
 .pageHead{gap:20px;align-items:center}.pageHead h1,.pageTitle h1{font-size:clamp(28px,4vw,40px)}.pageHead>div{min-width:0}.pageHead>a{flex-shrink:0}.pageHead p,.pageTitle p{line-height:1.65;color:#626262}
 .panel,.contentCard{box-shadow:0 3px 16px rgb(0 0 0 / 2%)}.panelHead{gap:12px;flex-wrap:wrap}.panelHead h3{margin:8px 0}.panelHead button,.scheduleRow button,.availabilitySlot button{min-height:44px}
 .dashboardShortcuts{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}.dashboardShortcuts a{display:inline-flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid var(--line);border-radius:14px;font-weight:700;font-size:14px;background:#fff}.dashboardShortcuts a:first-child{border-color:#ffd1be;background:#fff6f0}.dashboardShortcuts b{font-size:12px;color:#aa3108}

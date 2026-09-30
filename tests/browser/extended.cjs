@@ -82,7 +82,6 @@ module.exports = async function extended({ browser, origin, apiOrigin, kakaoFixt
     console.log('PASS public pages, mobile width, missing instructor/booking parameters and anonymous route guards')
 
     await guest.goto(origin + '/map')
-    await guest.locator('.yataMapSelected').count()
     assert.equal(await guest.locator('.mobileLogin').isVisible(), true)
     assert.equal(await guest.getByRole('navigation', { name: '모바일 메뉴' }).getByRole('link', { name: '교관찾기' }).getAttribute('aria-current'), 'page')
     await guest.getByRole('button', { name: '강남구', exact: true }).click()
@@ -90,6 +89,7 @@ module.exports = async function extended({ browser, origin, apiOrigin, kakaoFixt
     assert.equal(await guest.getByLabel('연수 지역 검색').inputValue(), '강남구')
     await guest.getByRole('link', { name: '교관 목록 보기 ↓' }).click()
     assert.equal(new URL(guest.url()).hash, '#instructor-results')
+    await guest.screenshot({ path: 'test-results/09-map-ux-mobile.png', fullPage: true })
     console.log('PASS mobile login visibility, active navigation, regional shortcut and results jump')
 
     const next = '/book?instructor=' + instructor.id + '&pickup=' + encodeURIComponent('서울')
