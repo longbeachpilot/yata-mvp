@@ -1,4 +1,5 @@
 'use client'
+import { AcademyInfo } from '@/components/academy-info'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -78,7 +79,7 @@ export default function AdminBookingsPage() {
 
   return <main className="container section pageTop">
     <div className="pageHead"><div><span>YA TA ADMIN</span><h1>예약 운영 관리</h1><p>예약 상태와 양쪽 안내 여부를 확인합니다.</p></div><Link className="ghostBtn" href="/admin/instructors">교관 승인 관리</Link></div>
-    <section className="panel">
+    <nav className="dashboardShortcuts"><Link href="/admin/academies">제휴 학원 관리</Link></nav><section className="panel">
       <p>자동 이메일 알림은 제공하지 않습니다. 메일 초안을 열어 내용을 확인하고 직접 발송한 뒤 안내 기록을 남겨주세요. 발송·수신 여부가 자동으로 검증되지는 않습니다.</p>
       <p>상태가 변경되면 새 상태에 대한 안내가 필요합니다. 취소 기록은 환불 완료를 뜻하지 않습니다.</p>
       <div className="adminBookingFilters">
@@ -93,7 +94,7 @@ export default function AdminBookingsPage() {
       <div className="panelHead"><h2>{booking.lesson_type}</h2><strong className="status">{bookingStatusLabels[booking.status]}</strong></div>
       <p>{booking.lesson_date} {booking.start_time} · {booking.duration_minutes}분 · {Number(booking.amount).toLocaleString()}원</p>
       <p>시작 장소: {booking.pickup_text}</p><p className="bookingReference">예약번호: {booking.id}</p>
-      <div className="adminContacts">{(['learner', 'instructor'] as const).map(recipient => {
+      <AcademyInfo bookingId={booking.id}/><div className="adminContacts">{(['learner', 'instructor'] as const).map(recipient => {
         const email = booking[`${recipient}_email`], contacted = booking[`${recipient}_contacted_at`]
         const href = bookingNoticeMailto(email, booking)
         return <section key={recipient}>

@@ -65,7 +65,7 @@ async function newSession(role) {
   pages.push(page)
   page.setDefaultTimeout(10000)
   await page.clock.setFixedTime(testNow)
-  page.on('pageerror', e => pageErrors.push(`${role}: ${e.message}`))
+  page.on('pageerror', e => pageErrors.push(`${role} ${page.url()}: ${e.message}`))
   page.on('dialog', dialog => dialog.accept())
   const user = { id: ids[role], email: `${role}@example.invalid`, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: testNow.toISOString() }
   const exp = Math.floor(Date.parse('2031-01-01T00:00:00Z') / 1000)
@@ -83,6 +83,7 @@ async function newSession(role) {
     const rpc = path.split('/rpc/')[1]
     if (path.endsWith('/auth/v1/token')) body = { access_token: token, refresh_token: `fixture-${role}`, token_type: 'bearer', expires_in: exp - Math.floor(testNow.getTime()/1000), expires_at: exp, user }
     else if (path.endsWith('/auth/v1/user')) body = user
+    else if (rpc === 'get_booking_academy') body = { name: '테스트 수업 제공 학원', address: '서울 강남구', public_phone: '02-000-0000', refund_policy: '테스트 환불 안내', booking_allowed: true, snapshot: !!req.postDataJSON().p_booking_id }
     else if (rpc === 'is_admin') body = role === 'admin'
     else if (rpc === 'yata_get_my_credential') body = 'PRIVATE-TEST-CREDENTIAL'
     else if (rpc === 'yata_save_my_instructor') { savePayload = req.postDataJSON(); Object.assign(instructor, savePayload.profile_data); serviceRegions = instructor.area.split(', ').map(region_name => ({ instructor_id: teacherId, region_name })); body = null }

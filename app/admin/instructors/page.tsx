@@ -40,7 +40,7 @@ export default function AdminInstructorsPage() {
   return <main className="container section pageTop">
     <div className="pageTitle"><span>YA TA ADMIN</span><h1>교관 승인 관리</h1>
       <Link className="ghostBtn" href="/admin/bookings">예약 운영 관리</Link>
-      <p>등록 정보와 제출 자료를 별도로 확인한 뒤 보험 확인 및 공개 여부를 결정하세요.</p>
+      <Link className="ghostBtn" href="/admin/academies">제휴 학원·소속 교관 관리</Link><p>등록 정보와 제출 자료를 별도로 확인한 뒤 보험 확인 및 공개 여부를 결정하세요.</p>
       <button disabled={loading || !!busy} onClick={() => void load()}>{loading ? '확인 중...' : '목록 새로고침'}</button>
     </div>
     {error && <p role="alert" className="bookingError">{error}</p>}
