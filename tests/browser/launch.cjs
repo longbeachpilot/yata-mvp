@@ -20,7 +20,7 @@ const slots = [
 ]
 let browser, server, booking = null, log = null, history = [], contact = {}, eventId = 0
 let serviceRegions = [{ instructor_id: teacherId, region_name: '서울 강남' }]
-let failMap = false, failBookings = false, staleContact = false, savePayload, bookingPayload, slotPayload, failSlotSave = false
+let failMap = false, failBookings = false, staleContact = false, savePayload, bookingPayload, slotPayload, failSlotSave = false, failTransition = false
 const pageErrors = [], externalRequests = [], pages = []
 // Realistic Kakao responses, deliberately different from the saved short name.
 // No live map API calls or keys are used by this browser contract suite.
@@ -93,7 +93,7 @@ async function newSession(role) {
       record('requested'); body = booking.id
     } else if (rpc === 'instructor_transition_booking') {
       const p = req.postDataJSON()
-      record(p.next_status)
+      if (failTransition) { failTransition = false; status = 503; body = { message: 'temporary fixture failure' } } else record(p.next_status)
     } else if (rpc === 'cancel_my_booking') record('cancelled')
     else if (rpc === 'get_booking_history') body = history
     else if (rpc === 'create_lesson_log') {
@@ -262,6 +262,35 @@ async function screenshot(page, name) {
   await teacher.getByRole('status').getByText('4개의 가능 시간을 열었습니다.', { exact: true }).waitFor()
   assert.equal(await teacher.locator('.availabilitySlot').count(), 8)
   console.log('PASS bulk availability date/time selection, conflict/duplicate exclusion, atomic failure retry and reload')
+  // No browser-native confirm is available in embedded browser environments.
+  await teacher.evaluate(() => { window.confirm = () => false })
+  await teacher.getByRole('button', { name: '거절', exact: true }).click()
+  await teacher.getByRole('dialog').getByRole('button', { name: '돌아가기', exact: true }).click()
+  assert.equal(booking.status, 'requested')
+  await teacher.getByRole('button', { name: '거절', exact: true }).click()
+  failTransition = true
+  await teacher.getByRole('dialog').getByRole('button', { name: '거절 확정', exact: true }).click()
+  await teacher.getByRole('dialog').getByRole('alert').waitFor()
+  assert.equal(booking.status, 'requested')
+  await teacher.getByRole('dialog').getByRole('button', { name: '거절 확정', exact: true }).click()
+  await teacher.getByRole('dialog').waitFor({ state: 'hidden' })
+  assert.equal(booking.status, 'cancelled')
+  await learner.getByRole('button', { name: '예약 상태 새로고침' }).click()
+  await learner.locator('.bookingRow .status').getByText('취소', { exact: true }).waitFor()
+  // Independent confirmed fixture uses the same visible cancellation flow.
+  record('confirmed')
+  await teacher.reload()
+  await teacher.evaluate(() => { window.confirm = () => false })
+  await teacher.getByRole('button', { name: '확정 예약 취소', exact: true }).click()
+  await screenshot(teacher, '10-instructor-cancel-dialog-mobile')
+  await teacher.getByRole('dialog').getByRole('button', { name: '예약 취소 확정', exact: true }).click()
+  await teacher.getByRole('dialog').waitFor({ state: 'hidden' })
+  assert.equal(booking.status, 'cancelled')
+  await teacher.reload()
+  await teacher.locator('.scheduleRow').getByText('예약 취소', { exact: false }).waitFor()
+  record('requested')
+  await teacher.reload()
+  console.log('PASS instructor rejection and confirmed cancellation without native confirm, abort, inline error retry and reload')
   await teacher.getByRole('button', { name: '확정', exact: true }).click()
   await teacher.getByRole('button', { name: '수업 종료 후 완료 가능' }).waitFor()
   assert.equal(await teacher.getByRole('button', { name: '수업 종료 후 완료 가능' }).isDisabled(), true)
