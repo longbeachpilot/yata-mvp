@@ -42,7 +42,7 @@ module.exports = async function extended({ browser, origin, apiOrigin, kakaoFixt
       else if (name === 'instructors') body = url.searchParams.has('id') || url.searchParams.has('user_id') ? (state.hasInstructor ? state.instructor : null) : [state.instructor]
       else if (name === 'instructor_service_regions') body = [{ instructor_id: instructor.id, region_name: '서울 강남' }]
       else if (name === 'instructor_availability') {
-        if (method === 'POST') state.slots = [{ ...payload, id: 'fixture-slot' }]
+        if (method === 'POST') state.slots = payload.map((slot, index) => ({ ...slot, id: `fixture-slot-${index}` }))
         if (method === 'DELETE') state.slots = []
         body = state.slots
       } else if (name === 'register_instructor') { state.hasInstructor = true; state.profile.role = 'instructor'; body = instructor.id }
@@ -166,16 +166,20 @@ module.exports = async function extended({ browser, origin, apiOrigin, kakaoFixt
     teacherState.fail = ''
     await teacher.getByRole('button', { name: '교관 등록하기' }).click()
     await teacher.waitForURL('**/dashboard/instructor')
-    await teacher.getByLabel('날짜', { exact: true }).fill('2030-06-14')
-    await teacher.getByRole('button', { name: '가능 시간 열기' }).click()
-    await teacher.getByText('아직 지나지 않은 날짜와 시간을 선택해주세요.', { exact: true }).waitFor()
+    await teacher.getByRole('button', { name: '날짜 선택 해제', exact: true }).click()
+    await teacher.getByRole('button', { name: '2030-06-15', exact: true }).click()
+    await teacher.getByRole('button', { name: '09:00 시작', exact: true }).click()
+    await teacher.getByText('지난 시간', { exact: true }).waitFor()
+    assert.equal(await teacher.getByRole('button', { name: '0개 가능 시간 한 번에 열기' }).isDisabled(), true)
     assert.equal(teacherState.calls.filter(c => c.name === 'instructor_availability' && c.method === 'POST').length, 0)
-    await teacher.getByLabel('날짜', { exact: true }).fill('2030-06-16')
+    await teacher.getByRole('button', { name: '2030-06-15', exact: true }).click()
+    await teacher.getByRole('button', { name: '2030-06-16', exact: true }).click()
     teacherState.fail = 'instructor_availability'
-    await teacher.getByRole('button', { name: '가능 시간 열기' }).click()
-    await teacher.getByText('이미 예약된 수업과 겹치는 시간입니다.', { exact: false }).waitFor()
+    await teacher.getByRole('button', { name: '1개 가능 시간 한 번에 열기' }).click()
+    await teacher.getByText('새 예약과 겹치는 시간이 있어 등록하지 못했습니다.', { exact: false }).waitFor()
     teacherState.fail = ''
-    await teacher.getByRole('button', { name: '가능 시간 열기' }).click()
+    await teacher.getByRole('button', { name: '예약 상태 새로고침', exact: true }).click()
+    await teacher.getByRole('button', { name: '1개 가능 시간 한 번에 열기' }).click()
     await teacher.getByRole('button', { name: '시간 닫기' }).waitFor()
     await teacher.getByRole('button', { name: '시간 닫기' }).click()
     await teacher.getByText('아직 공개한 시간이 없습니다.', { exact: true }).waitFor()
