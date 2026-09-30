@@ -68,7 +68,7 @@ module.exports = async function extended({ browser, origin, apiOrigin, kakaoFixt
   }
   try {
     const { page: guest, state: guestState } = await session()
-    for (const path of ['/bookings', '/logbook', '/dashboard/instructor', '/admin/bookings', '/admin/instructors']) {
+    for (const path of ['/bookings', '/logbook', '/dashboard/instructor', '/admin/bookings', '/admin/instructors', '/admin/academies']) {
       await guest.goto(origin + path)
       await guest.waitForURL('**/login*')
     }
@@ -264,6 +264,8 @@ module.exports = async function extended({ browser, origin, apiOrigin, kakaoFixt
     guestState.academy = { ...guestState.academy, status: 'active' }
     await guest.getByRole('button', { name: '학원 정보 다시 확인', exact: true }).click()
     await guest.getByRole('region', { name: '수업 제공 학원' }).getByRole('heading', { name: '테스트 제휴 학원' }).waitFor()
+    await login(guest)
+    await guest.waitForURL('**/map')
     await guest.goto(origin + '/admin/academies')
     await guest.getByRole('alert').getByText('관리자 권한 또는 학원 목록을 확인하지 못했습니다.', { exact: false }).waitFor()
     assert.equal(await guest.getByRole('button', { name: '학원 저장', exact: true }).count(), 0)
