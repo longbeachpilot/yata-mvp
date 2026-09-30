@@ -12,7 +12,7 @@ module.exports = async function extended({ browser, origin, apiOrigin, kakaoFixt
     await page.clock.setFixedTime(testNow)
     page.on('pageerror', e => errors.push(e.message))
     page.on('dialog', d => d.accept())
-    const state = { role, fail: '', calls: [], profile: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', role: role === 'instructor' ? 'instructor' : 'learner', display_name: '검증 사용자', phone: null, home_area: '서울 강남' }, instructor: { ...instructor, area: '서울 강남' }, hasInstructor: true, slots: [], signupLimit: true, recoveryLimit: true, mapFailure: false }
+    const state = { role, academy: null, academyId: null, fail: '', calls: [], profile: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', role: role === 'instructor' ? 'instructor' : 'learner', display_name: '검증 사용자', phone: null, home_area: '서울 강남' }, instructor: { ...instructor, area: '서울 강남' }, hasInstructor: true, slots: [], signupLimit: true, recoveryLimit: true, mapFailure: false }
     const user = { id: state.profile.id, email: `${role}@example.invalid`, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: testNow.toISOString() }
     const exp = Math.floor(Date.parse('2031-01-01T00:00:00Z') / 1000)
     const token = ['eyJhbGciOiJIUzI1NiJ9', Buffer.from(JSON.stringify({ sub: user.id, exp })).toString('base64url'), 'fixture'].join('.')
@@ -38,6 +38,11 @@ module.exports = async function extended({ browser, origin, apiOrigin, kakaoFixt
       else if (name === 'user') body = user
       else if (name === 'logout') body = {}
       else if (name === 'profiles') { if (method === 'PATCH') Object.assign(state.profile, payload); body = state.profile }
+      else if (name === 'get_booking_academy') body = state.academyId && state.academy ? state.academy.status === 'active' ? { name: state.academy.name, address: state.academy.address, public_phone: state.academy.public_phone, refund_policy: state.academy.refund_policy, booking_allowed: true } : { booking_allowed: false } : null
+      else if (name === 'admin_academy_overview') { if (state.role !== 'admin') { status = 403; body = { message: 'ADMIN_REQUIRED' } } else body = { academies: state.academy ? [state.academy] : [], instructors: [{ id: instructor.id, name: instructor.name, area: instructor.area, academy_id: state.academyId }] } }
+      else if (name === 'admin_save_academy') { state.academy = { ...payload.academy_data, id: payload.target_academy_id || '66666666-6666-4666-8666-666666666666' }; body = state.academy.id }
+      else if (name === 'admin_assign_academy') { state.academyId = payload.target_academy_id; body = null }
+      else if (name === 'admin_academy_monthly') body = state.academy ? [{ id: state.academy.id, name: state.academy.name, total: 0, requested: 0, confirmed: 0, completed: 0, cancelled: 0, completed_amount: 0 }] : []
       else if (name === 'is_admin') body = state.role === 'admin'
       else if (name === 'instructors') body = url.searchParams.has('id') || url.searchParams.has('user_id') ? (state.hasInstructor ? state.instructor : null) : [state.instructor]
       else if (name === 'instructor_service_regions') body = [{ instructor_id: instructor.id, region_name: '서울 강남' }]
@@ -63,7 +68,7 @@ module.exports = async function extended({ browser, origin, apiOrigin, kakaoFixt
   }
   try {
     const { page: guest, state: guestState } = await session()
-    for (const path of ['/bookings', '/logbook', '/dashboard/instructor', '/admin/bookings', '/admin/instructors']) {
+    for (const path of ['/bookings', '/logbook', '/dashboard/instructor', '/admin/bookings', '/admin/instructors', '/admin/academies']) {
       await guest.goto(origin + path)
       await guest.waitForURL('**/login*')
     }
@@ -220,6 +225,52 @@ module.exports = async function extended({ browser, origin, apiOrigin, kakaoFixt
     await admin.goto(origin + '/auth/callback')
     await admin.waitForURL('**/admin/bookings')
     console.log('PASS admin load failure/recovery, approval states, preserving active status and admin callback')
+    await admin.goto(origin + '/admin/academies')
+    await admin.getByLabel('학원명', { exact: true }).fill('테스트 제휴 학원')
+    await admin.getByLabel('학원 주소', { exact: true }).fill('서울 강남구')
+    await admin.getByLabel('고객용 전화번호', { exact: true }).fill('02-000-0000')
+    await admin.getByLabel('사업자등록번호', { exact: true }).fill('000-00-00000')
+    await admin.getByLabel('MOU 체결일', { exact: true }).fill('2030-06-01')
+    await admin.getByLabel('고객에게 보여줄 취소·환불 안내').fill('테스트 학원 취소 안내입니다.')
+    await admin.getByLabel('학원 등록·교육 제공 자격 자료 확인').check()
+    await admin.getByLabel('해당 연수의 차량·보험 적용 자료 확인').check()
+    await admin.getByLabel('운영 상태', { exact: true }).selectOption('active')
+    await admin.getByRole('button', { name: '학원 저장', exact: true }).click()
+    await admin.getByText('제휴 학원을 저장했습니다.', { exact: true }).waitFor()
+    await admin.getByLabel(instructor.name + ' 소속 학원', { exact: true }).selectOption(adminState.academy.id)
+    await admin.getByRole('button', { name: '연결 저장', exact: true }).click()
+    await admin.getByText('교관의 학원 연결을 저장했습니다.', { exact: true }).waitFor()
+    await admin.getByRole('button', { name: '월간 실적 조회', exact: true }).click()
+    await admin.getByRole('table').waitFor()
+    assert.equal(await admin.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
+    await admin.screenshot({ path: 'test-results/11-partner-admin-mobile.png', fullPage: true })
+    await admin.reload()
+    assert.equal(await admin.getByLabel(instructor.name + ' 소속 학원', { exact: true }).inputValue(), adminState.academy.id)
+    guestState.academy = adminState.academy
+    guestState.academyId = adminState.academy.id
+    guestState.slots = [{ instructor_id: instructor.id, lesson_date: '2030-06-16', start_time: '10:00' }]
+    await guest.goto(origin + '/book?instructor=' + instructor.id)
+    await guest.getByRole('region', { name: '수업 제공 학원' }).getByRole('heading', { name: '테스트 제휴 학원' }).waitFor()
+    assert.equal(await guest.getByRole('button', { name: '예약 요청하기', exact: true }).isEnabled(), true)
+    guestState.academy = { ...guestState.academy, status: 'paused' }
+    await guest.reload()
+    await guest.getByText('제휴 학원이 현재 예약 준비 중이거나 운영 중지 상태입니다.', { exact: false }).waitFor()
+    assert.equal(await guest.getByRole('button', { name: '예약 요청하기', exact: true }).isDisabled(), true)
+    guestState.fail = 'get_booking_academy'
+    await guest.reload()
+    await guest.getByText('학원 정보를 확인하지 못했습니다.', { exact: true }).waitFor()
+    assert.equal(await guest.getByRole('button', { name: '예약 요청하기', exact: true }).isDisabled(), true)
+    guestState.fail = ''
+    guestState.academy = { ...guestState.academy, status: 'active' }
+    await guest.getByRole('button', { name: '학원 정보 다시 확인', exact: true }).click()
+    await guest.getByRole('region', { name: '수업 제공 학원' }).getByRole('heading', { name: '테스트 제휴 학원' }).waitFor()
+    await login(guest)
+    await guest.waitForURL('**/map')
+    await guest.goto(origin + '/admin/academies')
+    await guest.getByRole('alert').getByText('관리자 권한 또는 학원 목록을 확인하지 못했습니다.', { exact: false }).waitFor()
+    assert.equal(await guest.getByRole('button', { name: '학원 저장', exact: true }).count(), 0)
+    console.log('PASS partner onboarding, instructor assignment, monthly report, reload, provider display, paused/error booking block and admin denial')
+
 
     guestState.fail = 'instructors'
     await guest.goto(origin)

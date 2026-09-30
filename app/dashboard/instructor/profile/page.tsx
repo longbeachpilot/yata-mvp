@@ -1,4 +1,5 @@
 'use client'
+import { AcademyInfo } from '@/components/academy-info'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -405,7 +406,7 @@ export default function InstructorProfilePage() {
                 />
               </label>
 
-              <ServiceRegionPicker value={area} onChange={setArea} disabled={saving} />
+              <AcademyInfo instructorId={profile.id}/><ServiceRegionPicker value={area} onChange={setArea} disabled={saving} />
             </div>
           </section>
 
