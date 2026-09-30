@@ -20,7 +20,7 @@ const slots = [
 ]
 let browser, server, booking = null, log = null, history = [], contact = {}, eventId = 0
 let serviceRegions = [{ instructor_id: teacherId, region_name: '서울 강남' }]
-let failMap = false, failBookings = false, staleContact = false, savePayload, bookingPayload
+let failMap = false, failBookings = false, staleContact = false, savePayload, bookingPayload, slotPayload, failSlotSave = false
 const pageErrors = [], externalRequests = [], pages = []
 // Realistic Kakao responses, deliberately different from the saved short name.
 // No live map API calls or keys are used by this browser contract suite.
@@ -117,7 +117,14 @@ async function newSession(role) {
     else if (path.endsWith('/instructors')) {
       if (failMap) { status = 503; body = { message: 'fixture unavailable' } }
       else body = url.searchParams.has('id') || url.searchParams.has('user_id') ? instructor : [instructor]
-    } else if (path.endsWith('/instructor_availability')) body = slots
+    } else if (path.endsWith('/instructor_availability')) {
+      if (req.method() === 'POST') {
+        slotPayload = req.postDataJSON()
+        assert.ok(Array.isArray(slotPayload))
+        if (failSlotSave) { failSlotSave = false; status = 409; body = { message: 'SLOT_CONFLICT' } }
+        else { for (const slot of slotPayload) { assert.equal(slot.instructor_id, teacherId); assert.equal(slot.is_available, true); const existing = slots.find(s => s.lesson_date === slot.lesson_date && s.start_time === slot.start_time); if (existing) Object.assign(existing, slot); else slots.push({ ...slot, id: `bulk-${slots.length}` }) } body = null }
+      } else body = slots
+    }
     else if (path.endsWith('/bookings')) {
       if (failBookings) { status = 503; body = { message: 'fixture unavailable' } }
       else body = url.searchParams.has('id') ? booking : booking ? [booking] : []
@@ -225,6 +232,31 @@ async function screenshot(page, name) {
   await teacher.getByRole('heading', { name: '테스트 교관 교관 대시보드' }).waitFor()
   assert.equal(await teacher.locator('.dashStats > div').filter({ hasText: '공개 가능시간' }).locator('b').innerText(), '2')
   assert.equal(await teacher.locator('.availabilitySlot').count(), 2)
+  // Multiple dates × times, duplicate/conflict exclusions, and failed batch recovery.
+  await teacher.getByRole('button', { name: '10:00 시작', exact: true }).click()
+  await teacher.getByRole('button', { name: '12:00 시작', exact: true }).click()
+  await teacher.getByRole('button', { name: '2030-06-17', exact: true }).click()
+  await teacher.getByText('예약과 겹침', { exact: true }).waitFor()
+  await teacher.getByText('이미 공개 중', { exact: true }).waitFor()
+  await teacher.getByRole('button', { name: '2개 가능 시간 한 번에 열기', exact: true }).click()
+  await teacher.getByRole('status').getByText('2개의 가능 시간을 열었습니다.', { exact: true }).waitFor()
+  assert.equal(slotPayload.length, 2)
+  assert.deepEqual(slotPayload.map(s => s.lesson_date), ['2030-06-17', '2030-06-17'])
+  await teacher.reload()
+  await teacher.getByRole('heading', { name: '테스트 교관 교관 대시보드' }).waitFor()
+  assert.equal(await teacher.locator('.availabilitySlot').count(), 4)
+  await teacher.getByRole('button', { name: '오후 시간 선택', exact: true }).click()
+  await teacher.getByRole('button', { name: '2030-06-17', exact: true }).click()
+  await screenshot(teacher, '08-bulk-availability-mobile')
+  failSlotSave = true
+  await teacher.getByRole('button', { name: '4개 가능 시간 한 번에 열기', exact: true }).click()
+  await teacher.getByText('새 예약과 겹치는 시간이 있어 등록하지 못했습니다.', { exact: false }).waitFor()
+  assert.equal(await teacher.locator('.availabilitySlot').count(), 4)
+  assert.equal(await teacher.getByRole('button', { name: '14:00 시작', exact: true }).getAttribute('aria-pressed'), 'true')
+  await teacher.getByRole('button', { name: '4개 가능 시간 한 번에 열기', exact: true }).click()
+  await teacher.getByRole('status').getByText('4개의 가능 시간을 열었습니다.', { exact: true }).waitFor()
+  assert.equal(await teacher.locator('.availabilitySlot').count(), 8)
+  console.log('PASS bulk availability date/time selection, conflict/duplicate exclusion, atomic failure retry and reload')
   await teacher.getByRole('button', { name: '확정', exact: true }).click()
   await teacher.getByRole('button', { name: '수업 종료 후 완료 가능' }).waitFor()
   assert.equal(await teacher.getByRole('button', { name: '수업 종료 후 완료 가능' }).isDisabled(), true)
