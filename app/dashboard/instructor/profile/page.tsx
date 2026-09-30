@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { ServiceRegionPicker } from '@/components/service-region-picker'
 
 type InstructorProfile = {
   id: string
@@ -147,7 +148,9 @@ export default function InstructorProfilePage() {
         setProfile(instructor)
 
         setName(instructor.name || '')
-        setArea(instructor.area || '')
+        const { data: serviceRegions, error: regionError } = await supabase.from('instructor_service_regions').select('region_name').eq('instructor_id', instructor.id).eq('active', true)
+        if (regionError) { setError('활동지역을 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.'); return }
+        setArea(serviceRegions?.length ? serviceRegions.map(r => r.region_name).join(', ') : instructor.area || '')
         setSpecialties(
           instructor.specialties || []
         )
@@ -228,7 +231,7 @@ export default function InstructorProfilePage() {
 
     if (!area.trim()) {
       setMessage(
-        '활동지역을 입력해주세요.'
+        '활동지역을 한 곳 이상 선택해주세요.'
       )
       return
     }
@@ -402,26 +405,7 @@ export default function InstructorProfilePage() {
                 />
               </label>
 
-              <label>
-                <div
-                  style={{
-                    fontWeight: 700,
-                    marginBottom: 8,
-                  }}
-                >
-                  활동지역
-                </div>
-
-                <input
-                  value={area}
-                  onChange={(e) =>
-                    setArea(
-                      e.target.value
-                    )
-                  }
-                  style={inputStyle}
-                />
-              </label>
+              <ServiceRegionPicker value={area} onChange={setArea} disabled={saving} />
             </div>
           </section>
 
