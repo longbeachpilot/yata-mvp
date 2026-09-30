@@ -19,6 +19,7 @@ const slots = [
   { id: 'future-2', lesson_date: tomorrow, start_time: '12:00', instructor_id: teacherId },
 ]
 let browser, server, booking = null, log = null, history = [], contact = {}, eventId = 0
+let serviceRegions = [{ instructor_id: teacherId, region_name: '서울 강남' }]
 let failMap = false, failBookings = false, staleContact = false, savePayload, bookingPayload
 const pageErrors = [], externalRequests = [], pages = []
 // Realistic Kakao responses, deliberately different from the saved short name.
@@ -31,10 +32,13 @@ window.kakao = { maps: {
   Marker: class { setMap() {} },
   services: {
     Status: { OK: 'OK' },
-    Geocoder: class { addressSearch(query, callback) {
+    Geocoder: class { coord2RegionCode(lng, lat, callback) {
+      callback([{ region_type: 'B', region_1depth_name: lng > 127.1 ? '경기도' : '서울특별시', region_2depth_name: lng > 127.1 ? '성남시 분당구' : '강남구', region_3depth_name: lng > 127.1 ? '백현동' : '역삼동' }], 'OK');
+    } addressSearch(query, callback) {
       const addresses = {
         '강남': '서울 강남구',
         '강남구': '서울 강남구',
+        '경기 성남시 분당구': '경기 성남시 분당구',
         '서울특별시 강남구 역삼동': '서울 강남구 역삼동',
         '서울 노원구': '서울 노원구'
       };
@@ -44,7 +48,7 @@ window.kakao = { maps: {
     Places: class { keywordSearch(query, callback) {
       const addresses = { '강남역': '서울 강남구 강남대로 396', '판교역': '경기 성남시 분당구 판교역로 160' };
       const address = addresses[query];
-      callback(address ? [{ road_address_name: address, x: '127.0276', y: '37.4979' }] : [], address ? 'OK' : 'ZERO_RESULT');
+      callback(address ? [{ road_address_name: address, ...(query === '판교역' ? {address_name: '경기 성남시 분당구 백현동 1'} : {}), x: query === '판교역' ? '127.1139' : '127.0276', y: '37.4979' }] : [], address ? 'OK' : 'ZERO_RESULT');
     } }
   }
 } };
@@ -81,7 +85,7 @@ async function newSession(role) {
     else if (path.endsWith('/auth/v1/user')) body = user
     else if (rpc === 'is_admin') body = role === 'admin'
     else if (rpc === 'yata_get_my_credential') body = 'PRIVATE-TEST-CREDENTIAL'
-    else if (rpc === 'yata_save_my_instructor') { savePayload = req.postDataJSON(); body = null }
+    else if (rpc === 'yata_save_my_instructor') { savePayload = req.postDataJSON(); Object.assign(instructor, savePayload.profile_data); serviceRegions = instructor.area.split(', ').map(region_name => ({ instructor_id: teacherId, region_name })); body = null }
     else if (rpc === 'create_booking_request') {
       bookingPayload = req.postDataJSON()
       const p = bookingPayload
@@ -118,7 +122,7 @@ async function newSession(role) {
       if (failBookings) { status = 503; body = { message: 'fixture unavailable' } }
       else body = url.searchParams.has('id') ? booking : booking ? [booking] : []
     } else if (path.endsWith('/lesson_logs')) body = url.searchParams.has('booking_id') ? log : log ? [log] : []
-    else if (path.endsWith('/instructor_service_regions')) body = [{ instructor_id: teacherId, region_name: '서울 강남' }]
+    else if (path.endsWith('/instructor_service_regions')) body = serviceRegions
     else { pageErrors.push(`Unexpected mocked request: ${path}`); status = 500; body = { message: 'Unexpected fixture request' } }
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
   })
@@ -297,6 +301,35 @@ async function screenshot(page, name) {
   assert.equal(savePayload.private_license_number, 'PRIVATE-TEST-CREDENTIAL')
   assert.equal('insurance_verified' in savePayload.profile_data, false)
   console.log('PASS private credential editing preserves operator-only insurance verification')
+  await teacher.getByLabel('활동지역 검색어').fill('판교역')
+  await teacher.getByRole('button', { name: '지역 찾기', exact: true }).click()
+  await teacher.getByRole('list', { name: '활동지역 검색 결과' }).getByRole('button').click()
+  await teacher.getByLabel('시·도', { exact: true }).waitFor()
+  assert.equal(await teacher.getByLabel('시·도', { exact: true }).inputValue(), '경기도')
+  assert.equal(await teacher.getByLabel('시·군·구', { exact: true }).inputValue(), '성남시 분당구')
+  await teacher.getByLabel('방문 가능 범위').selectOption('town')
+  await teacher.getByRole('button', { name: '활동지역 추가', exact: true }).click()
+  await teacher.getByRole('button', { name: '활동지역 추가', exact: true }).click()
+  await teacher.getByText('이미 선택한 활동지역입니다.', { exact: true }).waitFor()
+  assert.equal(await teacher.getByRole('button', { name: '경기도 성남시 분당구 백현동 삭제', exact: true }).count(), 1)
+  await teacher.getByRole('button', { name: '서울 강남 삭제', exact: true }).click()
+  await teacher.getByRole('button', { name: '경기도 성남시 분당구 백현동 삭제', exact: true }).click()
+  await teacher.getByRole('button', { name: '변경사항 저장', exact: true }).click()
+  await teacher.getByText('활동지역을 한 곳 이상 선택해주세요.', { exact: true }).waitFor()
+  await teacher.getByRole('button', { name: '활동지역 추가', exact: true }).click()
+  await teacher.getByRole('button', { name: '변경사항 저장', exact: true }).click()
+  await teacher.getByText('교관 프로필이 저장되었습니다.', { exact: false }).waitFor()
+  assert.equal(savePayload.profile_data.area, '경기도 성남시 분당구 백현동')
+  await teacher.reload()
+  await teacher.getByRole('button', { name: '경기도 성남시 분당구 백현동 삭제', exact: true }).waitFor()
+  await screenshot(teacher, '07-instructor-region-picker-mobile')
+  await learner.goto(origin + '/map?q=' + encodeURIComponent('판교역'))
+  await learner.locator('.yataMapSelected').waitFor()
+  await learner.locator('.yataMapCard').filter({ hasText: '테스트 교관' }).waitFor()
+  console.log('PASS map-linked region fields, neighbourhood scope, duplicate/empty validation, save/reload and learner discovery')
+  await learner.getByLabel('연수 지역 검색').fill('경기 성남시 분당구')
+  await learner.getByRole('button', { name: '지역 검색', exact: true }).click()
+  await learner.locator('.yataMapCard').filter({ hasText: '테스트 교관' }).waitFor()
   await require('./extended.cjs')({ browser, origin, apiOrigin, kakaoFixture, instructor, testNow })
   failMap = true
   await learner.goto(origin + '/map')
