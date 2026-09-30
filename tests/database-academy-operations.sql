@@ -44,4 +44,13 @@ begin
  denied:=false;begin perform public.create_booking_request(inst,'주차',lesson_day,'14:00',120,'Test pickup');exception when others then if SQLERRM<>'ACADEMY_UNAVAILABLE' then raise;end if;denied:=true;end;assert denied,'cannot book beyond agreement expiry';
 end $$;
 RESET ROLE;
+SET LOCAL ROLE anon;
+DO $$
+declare denied boolean:=false;
+begin
+ assert public.get_booking_academy(null,null) is null,'public lookup has no private fallback';
+ begin perform public.get_booking_academy(null,gen_random_uuid());exception when others then if SQLERRM<>'BOOKING_ACCESS_DENIED' then raise;end if;denied:=true;end;
+ assert denied,'anonymous booking snapshot denied';
+end $$;
+RESET ROLE;
 ROLLBACK;
