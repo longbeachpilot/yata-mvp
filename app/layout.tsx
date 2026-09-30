@@ -1,5 +1,6 @@
 import './globals.css'
 import './marketplace.css'
+import './ux.css'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { BottomNav, Header } from '@/components/navigation'
@@ -14,8 +15,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko">
       <body>
+        <a className="skipLink" href="#main-content">본문으로 바로가기</a>
         <Header />
-        <main>{children}</main>
+        <div id="main-content" tabIndex={-1}>{children}</div>
         <footer className="siteFooter">
           <div className="container">
             <nav className="legalLinks" aria-label="이용 안내">
