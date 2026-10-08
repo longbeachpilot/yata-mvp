@@ -10,7 +10,7 @@ module.exports = async function extended({ browser, origin, apiOrigin, kakaoFixt
     const page = await context.newPage()
     page.setDefaultTimeout(10000)
     await page.clock.setFixedTime(testNow)
-    page.on('pageerror', e => errors.push(e.message))
+    page.on('pageerror', e => errors.push(`${page.url()}: ${e.message}`))
     page.on('dialog', d => d.accept())
     const state = { role, academy: null, academyId: null, fail: '', calls: [], profile: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', role: role === 'instructor' ? 'instructor' : 'learner', display_name: '검증 사용자', phone: null, home_area: '서울 강남' }, instructor: { ...instructor, area: '서울 강남' }, hasInstructor: true, slots: [], signupLimit: true, recoveryLimit: true, mapFailure: false }
     const user = { id: state.profile.id, email: `${role}@example.invalid`, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: testNow.toISOString() }
