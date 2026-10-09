@@ -7,6 +7,8 @@ const fs = require('node:fs')
 const assert = require('node:assert/strict')
 const origin = 'http://127.0.0.1:3012'
 const apiOrigin = process.env.YATA_TEST_SUPABASE_URL || 'https://example.supabase.co'
+const academyMode = process.env.YATA_TEST_ACADEMY_MODE || 'partner'
+assert.ok(['ordinary', 'partner'].includes(academyMode), 'known academy test mode')
 const teacherId = '11111111-1111-4111-8111-111111111111'
 const ids = { learner: '22222222-2222-4222-8222-222222222222', instructor: '44444444-4444-4444-8444-444444444444', admin: '55555555-5555-4555-8555-555555555555' }
 const testNow = new Date('2030-06-15T01:00:00Z') // 10:00 Seoul
@@ -20,7 +22,7 @@ const slots = [
 ]
 let browser, server, booking = null, log = null, history = [], contact = {}, eventId = 0
 let serviceRegions = [{ instructor_id: teacherId, region_name: '서울 강남' }]
-let failMap = false, failBookings = false, staleContact = false, savePayload, bookingPayload, slotPayload, failSlotSave = false, failTransition = false
+let failMap = false, failBookings = false, staleContact = false, savePayload, bookingPayload, slotPayload, failSlotSave = false, failTransition = false, failLearnerCancel = false
 const pageErrors = [], externalRequests = [], pages = []
 // Realistic Kakao responses, deliberately different from the saved short name.
 // No live map API calls or keys are used by this browser contract suite.
@@ -83,7 +85,7 @@ async function newSession(role) {
     const rpc = path.split('/rpc/')[1]
     if (path.endsWith('/auth/v1/token')) body = { access_token: token, refresh_token: `fixture-${role}`, token_type: 'bearer', expires_in: exp - Math.floor(testNow.getTime()/1000), expires_at: exp, user }
     else if (path.endsWith('/auth/v1/user')) body = user
-    else if (rpc === 'get_booking_academy') body = { name: '테스트 수업 제공 학원', address: '서울 강남구', public_phone: '02-000-0000', refund_policy: '테스트 환불 안내', booking_allowed: true, snapshot: !!req.postDataJSON().p_booking_id }
+    else if (rpc === 'get_booking_academy') body = academyMode === 'ordinary' ? null : { name: '테스트 수업 제공 학원', address: '서울 강남구', public_phone: '02-000-0000', refund_policy: '테스트 환불 안내', booking_allowed: true, snapshot: !!req.postDataJSON().p_booking_id }
     else if (rpc === 'is_admin') body = role === 'admin'
     else if (rpc === 'yata_get_my_credential') body = 'PRIVATE-TEST-CREDENTIAL'
     else if (rpc === 'yata_save_my_instructor') { savePayload = req.postDataJSON(); Object.assign(instructor, savePayload.profile_data); serviceRegions = instructor.area.split(', ').map(region_name => ({ instructor_id: teacherId, region_name })); body = null }
@@ -95,7 +97,9 @@ async function newSession(role) {
     } else if (rpc === 'instructor_transition_booking') {
       const p = req.postDataJSON()
       if (failTransition) { failTransition = false; status = 503; body = { message: 'temporary fixture failure' } } else record(p.next_status)
-    } else if (rpc === 'cancel_my_booking') record('cancelled')
+    } else if (rpc === 'cancel_my_booking') {
+      if (failLearnerCancel) { failLearnerCancel = false; status = 503; body = { message: 'temporary cancellation failure' } } else record('cancelled')
+    }
     else if (rpc === 'get_booking_history') body = history
     else if (rpc === 'create_lesson_log') {
       const p = req.postDataJSON()
@@ -206,8 +210,12 @@ async function screenshot(page, name) {
   assert.equal(await learner.locator('.yataMapSelected').count(), 0)
   console.log('PASS failed region search clears old results and empty query restores all regions')
   await learner.locator('.yataMapCard').filter({ hasText: '테스트 교관' }).click()
+  await learner.getByRole('region', { name: '수업 제공 학원' }).getByText(academyMode === 'ordinary' ? '연결된 제휴 학원 정보가 없습니다.' : '테스트 수업 제공 학원', { exact: false }).waitFor()
   await learner.getByRole('link', { name: '이 교관에게 예약 요청' }).click()
   await learner.getByRole('button', { name: '예약 요청하기' }).waitFor()
+  await learner.getByRole('region', { name: '수업 제공 학원' }).getByText(academyMode === 'ordinary' ? '연결된 제휴 학원 정보가 없습니다.' : '테스트 수업 제공 학원', { exact: false }).waitFor()
+  assert.equal(await learner.getByRole('button', { name: '예약 요청하기' }).isEnabled(), true)
+  console.log(`PASS ${academyMode} instructor detail, academy display and booking readiness`)
   assert.deepEqual(await learner.getByLabel('가능 시간').locator('option').allTextContents(), ['10:00', '12:00'])
   assert.equal(await learner.getByLabel('가능 날짜').inputValue(), tomorrow)
   await learner.getByLabel('가능 시간').selectOption('12:00')
@@ -300,6 +308,30 @@ async function screenshot(page, name) {
   await learner.locator('.bookingRow .status').getByText('예약 확정', { exact: true }).waitFor()
   await screenshot(teacher, '02-confirmed-instructor-mobile')
   console.log('PASS independent instructor confirmation → learner refresh; early completion disabled')
+  // Exercise learner cancellation without a browser-native confirmation prompt.
+  await learner.evaluate(() => { window.confirm = () => false })
+  await learner.getByRole('button', { name: '예약 취소', exact: true }).click()
+  await learner.getByRole('dialog').waitFor()
+  await learner.getByRole('dialog').getByRole('button', { name: '돌아가기', exact: true }).click()
+  assert.equal(booking.status, 'confirmed', 'closing cancellation keeps the booking')
+  await learner.getByRole('button', { name: '예약 취소', exact: true }).click()
+  failLearnerCancel = true
+  await learner.getByRole('dialog').getByRole('button', { name: '예약 취소 확정', exact: true }).click()
+  await learner.getByRole('dialog').getByRole('alert').waitFor()
+  assert.equal(booking.status, 'confirmed', 'failed cancellation keeps the booking')
+  await screenshot(learner, `12-${academyMode}-learner-cancel-retry`)
+  await learner.getByRole('dialog').getByRole('button', { name: '예약 취소 확정', exact: true }).click()
+  await learner.getByRole('dialog').waitFor({ state: 'hidden' })
+  await learner.locator('.bookingRow .status').getByText('취소', { exact: true }).waitFor()
+  assert.equal(booking.status, 'cancelled')
+  await learner.reload()
+  await learner.locator('.bookingRow .status').getByText('취소', { exact: true }).waitFor()
+  await learner.getByRole('region', { name: '수업 제공 학원' }).getByText(academyMode === 'ordinary' ? '연결된 제휴 학원 정보가 없습니다.' : '테스트 수업 제공 학원', { exact: false }).waitFor()
+  console.log(`PASS ${academyMode} learner cancellation, abort, inline failure, retry, provider display and reload without native confirm`)
+  // Restore a confirmed fixture for the independent completion and review checks.
+  record('confirmed')
+  await learner.getByRole('button', { name: '예약 상태 새로고침' }).click()
+  await learner.locator('.bookingRow .status').getByText('예약 확정', { exact: true }).waitFor()
   // The visible learner tab checks status after a focus event without reloading the page.
   failBookings = true
   await learner.getByRole('button', { name: '예약 상태 새로고침' }).click()
